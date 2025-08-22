@@ -1,6 +1,6 @@
 import { SignJWT, jwtVerify } from "jose"
 import { cookies } from "next/headers"
-import { getAdminByEmail } from "./db"
+import { getAdminByEmail } from "./db-ff"
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "your-secret-key-change-in-production")
 
