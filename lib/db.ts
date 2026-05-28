@@ -6,37 +6,26 @@ if (!process.env.DATABASE_URL) {
 
 export const sql = neon(process.env.DATABASE_URL)
 
-// Database query helpers
 export async function getInventoryItems() {
   try {
     return await sql`
-      SELECT * FROM inventory 
+      SELECT * FROM inventory
       ORDER BY name ASC
     `
-  } catch (error) {
-    // Handle case where tables don't exist yet (during build)
+  } catch {
     console.warn("Database table 'inventory' not found, returning empty array")
     return []
   }
 }
 
-export async function getAvailableItems(startDate: string, endDate: string) {
+export async function getAvailableItems() {
   try {
     return await sql`
-      SELECT i.* FROM inventory i
-      WHERE i.is_available = true
-      AND i.id NOT IN (
-        SELECT r.item_id FROM rentals r
-        WHERE r.status IN ('confirmed', 'active')
-        AND (
-          (r.start_date <= ${startDate} AND r.end_date >= ${startDate})
-          OR (r.start_date <= ${endDate} AND r.end_date >= ${endDate})
-          OR (r.start_date >= ${startDate} AND r.end_date <= ${endDate})
-        )
-      )
-      ORDER BY i.name ASC
+      SELECT * FROM inventory
+      WHERE is_available = true
+      ORDER BY name ASC
     `
-  } catch (error) {
+  } catch {
     console.warn("Database tables not found, returning empty array")
     return []
   }
@@ -50,23 +39,9 @@ export async function getRentals() {
       JOIN inventory i ON r.item_id = i.id
       ORDER BY r.created_at DESC
     `
-  } catch (error) {
+  } catch {
     console.warn("Database tables not found, returning empty array")
     return []
-  }
-}
-
-export async function getAdminByEmail(email: string) {
-  try {
-    const result = await sql`
-      SELECT * FROM admins 
-      WHERE email = ${email}
-      LIMIT 1
-    `
-    return result[0] || null
-  } catch (error) {
-    console.warn("Database table 'admins' not found")
-    return null
   }
 }
 
@@ -89,11 +64,20 @@ export async function createRental(rental: {
 
 export async function updateRentalStatus(id: number, status: string) {
   return await sql`
-    UPDATE rentals 
+    UPDATE rentals
     SET status = ${status}, updated_at = NOW()
     WHERE id = ${id}
     RETURNING *
   `
+}
+
+export async function getInventoryById(id: number) {
+  try {
+    const result = await sql`SELECT * FROM inventory WHERE id = ${id} LIMIT 1`
+    return result[0] || null
+  } catch {
+    return null
+  }
 }
 
 export async function updateInventoryItem(
@@ -105,17 +89,19 @@ export async function updateInventoryItem(
     is_available?: boolean
   },
 ) {
-  const setClause = Object.entries(updates)
-    .filter(([_, value]) => value !== undefined)
-    .map(([key, _]) => `${key} = $${key}`)
-    .join(", ")
+  const current = await getInventoryById(id)
+  if (!current) return null
 
-  if (!setClause) return null
+  const name = updates.name ?? current.name
+  const description = updates.description !== undefined ? updates.description : current.description
+  const price_per_day = updates.price_per_day ?? current.price_per_day
+  const is_available = updates.is_available !== undefined ? updates.is_available : current.is_available
 
-  return await sql`
-    UPDATE inventory 
-    SET ${sql.unsafe(setClause)}, updated_at = NOW()
+  const result = await sql`
+    UPDATE inventory
+    SET name = ${name}, description = ${description}, price_per_day = ${price_per_day}, is_available = ${is_available}, updated_at = NOW()
     WHERE id = ${id}
     RETURNING *
   `
+  return result[0] || null
 }

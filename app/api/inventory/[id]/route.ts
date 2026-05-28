@@ -1,9 +1,13 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { updateInventoryItem } from "@/lib/db"
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const id = Number.parseInt(params.id)
+    const { id: idStr } = await params
+    const id = Number.parseInt(idStr)
     const updates = await request.json()
 
     const result = await updateInventoryItem(id, updates)
@@ -12,7 +16,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       return NextResponse.json({ error: "Artikel nicht gefunden" }, { status: 404 })
     }
 
-    return NextResponse.json(result[0])
+    return NextResponse.json(result)
   } catch (error) {
     console.error("Error updating inventory item:", error)
     return NextResponse.json({ error: "Interner Serverfehler" }, { status: 500 })
