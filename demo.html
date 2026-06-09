@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FFW Raubling – Geräteverleih</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+      color: #1a1a1a;
+      font-size: 16px;
+    }
+
+    /* ── Header ── */
+    header {
+      background: #fff;
+      border-bottom: 1px solid #e5e5e5;
+      padding: 16px 20px;
+    }
+    header h1 { font-size: 1.25rem; color: #dc2626; font-weight: 700; }
+    header p  { font-size: 0.85rem; color: #666; margin-top: 2px; }
+
+    /* ── Hauptbereich ── */
+    main { max-width: 680px; margin: 0 auto; padding: 20px 16px 60px; }
+
+    h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: 14px; color: #222; }
+
+    /* ── Artikel-Karten ── */
+    .artikel-liste { display: flex; flex-direction: column; gap: 10px; margin-bottom: 32px; }
+
+    .artikel-karte {
+      background: #fff;
+      border: 1px solid #e5e5e5;
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .artikel-karte:hover,
+    .artikel-karte.ausgewaehlt {
+      border-color: #dc2626;
+      box-shadow: 0 0 0 2px rgba(220,38,38,0.15);
+    }
+    .artikel-karte.ausgewaehlt { background: #fff8f8; }
+
+    .artikel-name   { font-weight: 600; font-size: 1rem; }
+    .artikel-beschr { font-size: 0.82rem; color: #666; margin-top: 2px; }
+    .artikel-preis  {
+      font-weight: 700;
+      color: #dc2626;
+      white-space: nowrap;
+      font-size: 1rem;
+      margin-left: 12px;
+    }
+
+    /* ── Formular ── */
+    .formular-karte {
+      background: #fff;
+      border: 1px solid #e5e5e5;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .formular-karte h2 { margin-bottom: 18px; }
+
+    .form-gruppe      { display: flex; flex-direction: column; gap: 5px; margin-bottom: 16px; }
+    .form-gruppe label{ font-size: 0.88rem; font-weight: 500; color: #444; }
+    .form-gruppe input,
+    .form-gruppe select,
+    .form-gruppe textarea {
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 1rem;
+      font-family: inherit;
+      width: 100%;
+      background: #fff;
+      transition: border-color 0.15s;
+    }
+    .form-gruppe input:focus,
+    .form-gruppe select:focus,
+    .form-gruppe textarea:focus {
+      outline: none;
+      border-color: #dc2626;
+      box-shadow: 0 0 0 2px rgba(220,38,38,0.12);
+    }
+    .form-zeile { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    .preis-box {
+      background: #fff8f8;
+      border: 1px solid #fca5a5;
+      border-radius: 8px;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .preis-box span:first-child { font-size: 0.9rem; color: #555; }
+    .preis-box .betrag          { font-size: 1.3rem; font-weight: 700; color: #dc2626; }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      background: #dc2626;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn:hover   { background: #b91c1c; }
+    .btn:active  { background: #991b1b; }
+    .btn:disabled{ background: #d1d5db; cursor: not-allowed; }
+
+    .hinweis {
+      text-align: center;
+      font-size: 0.8rem;
+      color: #888;
+      margin-top: 12px;
+    }
+
+    /* ── Erfolg ── */
+    .erfolg {
+      display: none;
+      text-align: center;
+      padding: 32px 20px;
+    }
+    .erfolg-icon  { font-size: 4rem; margin-bottom: 12px; }
+    .erfolg h3    { font-size: 1.3rem; font-weight: 700; margin-bottom: 8px; }
+    .erfolg p     { color: #555; font-size: 0.95rem; line-height: 1.5; }
+    .erfolg .neu  {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 10px 24px;
+      background: #dc2626;
+      color: #fff;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    /* ── Demo-Banner ── */
+    .demo-banner {
+      background: #1e40af;
+      color: #fff;
+      text-align: center;
+      font-size: 0.82rem;
+      padding: 8px 16px;
+    }
+    .demo-banner strong { display: block; font-size: 0.9rem; }
+
+    @media (max-width: 480px) {
+      .form-zeile { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="demo-banner">
+  <strong>⚠️ Demo-Version</strong>
+  Daten werden nicht gespeichert – nur zur Veranschaulichung
+</div>
+
+<header>
+  <h1>FFW Raubling – Geräteverleih</h1>
+  <p>Geräte und Ausstattung ausleihen</p>
+</header>
+
+<main>
+
+  <!-- Artikelliste -->
+  <section id="artikel-section">
+    <h2>Verfügbare Artikel</h2>
+    <div class="artikel-liste" id="artikel-liste">
+      <!-- wird per JS befüllt -->
+    </div>
+  </section>
+
+  <!-- Formular -->
+  <section class="formular-karte">
+    <div id="form-inhalt">
+      <h2>Ausleihe anfragen</h2>
+
+      <div class="form-gruppe">
+        <label for="artikel">Artikel *</label>
+        <select id="artikel" required>
+          <option value="">– bitte wählen –</option>
+        </select>
+      </div>
+
+      <div class="form-zeile">
+        <div class="form-gruppe">
+          <label for="von">Von *</label>
+          <input type="date" id="von" required>
+        </div>
+        <div class="form-gruppe">
+          <label for="bis">Bis *</label>
+          <input type="date" id="bis" required>
+        </div>
+      </div>
+
+      <div class="preis-box" id="preis-box" style="display:none">
+        <span id="preis-beschr">Gesamtbetrag</span>
+        <span class="betrag" id="preis-betrag">0,00 €</span>
+      </div>
+
+      <div class="form-gruppe">
+        <label for="name">Ihr Name *</label>
+        <input type="text" id="name" placeholder="Max Mustermann" required>
+      </div>
+
+      <div class="form-gruppe">
+        <label for="email">E-Mail *</label>
+        <input type="email" id="email" placeholder="max@beispiel.de" required>
+      </div>
+
+      <div class="form-gruppe">
+        <label for="telefon">Telefon</label>
+        <input type="tel" id="telefon" placeholder="+49 123 456789">
+      </div>
+
+      <div class="form-gruppe">
+        <label for="notiz">Notiz (optional)</label>
+        <textarea id="notiz" rows="2" placeholder="Besondere Hinweise..."></textarea>
+      </div>
+
+      <button class="btn" id="senden-btn" onclick="absenden()" disabled>Anfrage senden</button>
+      <p class="hinweis">* Pflichtfelder. Ihre Anfrage wird an die FFW Raubling weitergeleitet.</p>
+    </div>
+
+    <!-- Erfolgsmeldung -->
+    <div class="erfolg" id="erfolg">
+      <div class="erfolg-icon">✅</div>
+      <h3>Anfrage gesendet!</h3>
+      <p>Vielen Dank, <strong id="erfolg-name"></strong>.<br>
+        Wir melden uns so bald wie möglich bei Ihnen.<br>
+        <span id="erfolg-details" style="color:#dc2626;font-weight:600"></span>
+      </p>
+      <span class="neu" onclick="neustart()">Neue Anfrage</span>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  // ── Demo-Daten ──────────────────────────────────────────────────────────
+  const ARTIKEL = [
+    { id: 1, name: "Bierzeltgarnitur (10er Set)",  beschr: "10 Tische + 20 Bänke",            preis: 25 },
+    { id: 2, name: "Partyzelt 4 × 6 m",            beschr: "Weißes Festzelt mit Seitenteilen", preis: 40 },
+    { id: 3, name: "Lautsprecheranlage",            beschr: "2× Aktivboxen + Mischpult",       preis: 20 },
+    { id: 4, name: "Stromerzeuger 5 kW",            beschr: "Benzin, inkl. Kabel",             preis: 30 },
+    { id: 5, name: "Verkehrsleitkegel (20 Stk.)",   beschr: "Kunststoff, orange",              preis:  5 },
+  ]
+
+  // ── Initialisierung ────────────────────────────────────────────────────
+  const heute = new Date().toISOString().split('T')[0]
+  document.getElementById('von').min = heute
+  document.getElementById('bis').min = heute
+  document.getElementById('von').value = heute
+
+  // Artikelkarten
+  const liste = document.getElementById('artikel-liste')
+  const select = document.getElementById('artikel')
+
+  ARTIKEL.forEach(a => {
+    // Karte
+    const karte = document.createElement('div')
+    karte.className = 'artikel-karte'
+    karte.dataset.id = a.id
+    karte.innerHTML = `
+      <div>
+        <div class="artikel-name">${a.name}</div>
+        <div class="artikel-beschr">${a.beschr}</div>
+      </div>
+      <div class="artikel-preis">${a.preis} €/Tag</div>`
+    karte.onclick = () => artikelWaehlen(a.id)
+    liste.appendChild(karte)
+
+    // Select-Option
+    const opt = document.createElement('option')
+    opt.value = a.id
+    opt.textContent = `${a.name}  –  ${a.preis} €/Tag`
+    select.appendChild(opt)
+  })
+
+  // ── Artikel wählen ──────────────────────────────────────────────────────
+  function artikelWaehlen(id) {
+    document.querySelectorAll('.artikel-karte').forEach(k =>
+      k.classList.toggle('ausgewaehlt', +k.dataset.id === id)
+    )
+    document.getElementById('artikel').value = id
+    preisAktualisieren()
+    pruefeFormular()
+    // Zum Formular scrollen (Handy)
+    document.querySelector('.formular-karte').scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  // Auch über Select wählbar
+  document.getElementById('artikel').addEventListener('change', function() {
+    const id = +this.value
+    document.querySelectorAll('.artikel-karte').forEach(k =>
+      k.classList.toggle('ausgewaehlt', +k.dataset.id === id)
+    )
+    preisAktualisieren()
+    pruefeFormular()
+  })
+
+  // ── Datumsfelder ────────────────────────────────────────────────────────
+  document.getElementById('von').addEventListener('change', function() {
+    document.getElementById('bis').min = this.value
+    if (document.getElementById('bis').value < this.value)
+      document.getElementById('bis').value = this.value
+    preisAktualisieren()
+    pruefeFormular()
+  })
+  document.getElementById('bis').addEventListener('change', () => {
+    preisAktualisieren()
+    pruefeFormular()
+  })
+
+  ;['name','email'].forEach(id =>
+    document.getElementById(id).addEventListener('input', pruefeFormular)
+  )
+
+  // ── Preisberechnung ─────────────────────────────────────────────────────
+  function preisAktualisieren() {
+    const artikelId = +document.getElementById('artikel').value
+    const von = document.getElementById('von').value
+    const bis = document.getElementById('bis').value
+    const box = document.getElementById('preis-box')
+
+    if (!artikelId || !von || !bis) { box.style.display = 'none'; return }
+
+    const a = ARTIKEL.find(x => x.id === artikelId)
+    if (!a) { box.style.display = 'none'; return }
+
+    const tage = Math.max(1, Math.round(
+      (new Date(bis) - new Date(von)) / 86400000
+    ) + 1)
+    const gesamt = tage * a.preis
+
+    document.getElementById('preis-beschr').textContent =
+      `${tage} Tag${tage !== 1 ? 'e' : ''} × ${a.preis} €`
+    document.getElementById('preis-betrag').textContent =
+      gesamt.toFixed(2).replace('.', ',') + ' €'
+    box.style.display = 'flex'
+  }
+
+  // ── Formular-Validierung ────────────────────────────────────────────────
+  function pruefeFormular() {
+    const ok =
+      document.getElementById('artikel').value &&
+      document.getElementById('von').value &&
+      document.getElementById('bis').value &&
+      document.getElementById('name').value.trim() &&
+      document.getElementById('email').value.includes('@')
+    document.getElementById('senden-btn').disabled = !ok
+  }
+
+  // ── Absenden (Demo) ─────────────────────────────────────────────────────
+  function absenden() {
+    const artikelId = +document.getElementById('artikel').value
+    const a = ARTIKEL.find(x => x.id === artikelId)
+    const von = document.getElementById('von').value
+    const bis = document.getElementById('bis').value
+    const tage = Math.max(1, Math.round(
+      (new Date(bis) - new Date(von)) / 86400000
+    ) + 1)
+    const gesamt = tage * a.preis
+
+    const fmt = d => new Date(d).toLocaleDateString('de-DE')
+
+    document.getElementById('erfolg-name').textContent =
+      document.getElementById('name').value
+    document.getElementById('erfolg-details').textContent =
+      `${a.name}, ${fmt(von)} – ${fmt(bis)} (${gesamt.toFixed(2).replace('.',',')} €)`
+
+    document.getElementById('form-inhalt').style.display = 'none'
+    document.getElementById('erfolg').style.display = 'block'
+  }
+
+  // ── Neustart ────────────────────────────────────────────────────────────
+  function neustart() {
+    document.getElementById('form-inhalt').style.display = 'block'
+    document.getElementById('erfolg').style.display = 'none'
+    document.getElementById('artikel').value = ''
+    document.getElementById('von').value = heute
+    document.getElementById('bis').value = ''
+    document.getElementById('name').value = ''
+    document.getElementById('email').value = ''
+    document.getElementById('telefon').value = ''
+    document.getElementById('notiz').value = ''
+    document.getElementById('preis-box').style.display = 'none'
+    document.getElementById('senden-btn').disabled = true
+    document.querySelectorAll('.artikel-karte').forEach(k => k.classList.remove('ausgewaehlt'))
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+</script>
+</body>
+</html>
