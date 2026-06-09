@@ -18,9 +18,7 @@ export default async function HomePage() {
               <p className="text-base font-semibold text-gray-700">Geräteverleih</p>
               <p className="text-sm text-gray-500">Geräte und Ausstattung ausleihen</p>
             </div>
-            <Link href="/login" className="text-sm text-gray-400 hover:text-red-600 font-medium mt-1">
-              Admin
-            </Link>
+            <Link href="/login" className="text-sm text-gray-400 hover:text-red-600 font-medium mt-1">Admin</Link>
           </div>
         </div>
       </header>
@@ -35,7 +33,7 @@ export default async function HomePage() {
                   <CardHeader className="pb-1 pt-4">
                     <CardTitle className="flex items-center justify-between text-base">
                       <span>{item.name}</span>
-                      <span className="text-base font-bold text-red-600 whitespace-nowrap ml-2">{item.price_per_day}€/Tag</span>
+                      <span className="text-base font-bold text-red-600 whitespace-nowrap ml-2">{item.price_per_day}€</span>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pb-4 pt-1">
@@ -53,7 +51,6 @@ export default async function HomePage() {
               )}
             </div>
           </div>
-
           <div>
             <h2 className="text-xl font-bold text-gray-900 mb-4">Ausleihe anfragen</h2>
             <Card className="shadow-lg">

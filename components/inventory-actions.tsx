@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Edit, ToggleLeft, ToggleRight } from "lucide-react"
+import { MoreHorizontal, Edit, ToggleLeft, ToggleRight, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 interface InventoryActionsProps {
@@ -23,12 +23,19 @@ export default function InventoryActions({ item }: InventoryActionsProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ is_available: !item.is_available }),
       })
-
-      if (response.ok) {
-        router.refresh()
-      }
+      if (response.ok) router.refresh()
     } catch (error) {
       console.error("Error toggling availability:", error)
+    }
+  }
+
+  const deleteItem = async () => {
+    if (!window.confirm(`"${item.name}" wirklich löschen? Das kann nicht rückgängig gemacht werden.`)) return
+    try {
+      const response = await fetch(`/api/inventory/${item.id}`, { method: "DELETE" })
+      if (response.ok) router.refresh()
+    } catch (error) {
+      console.error("Error deleting item:", error)
     }
   }
 
@@ -46,16 +53,14 @@ export default function InventoryActions({ item }: InventoryActionsProps) {
         </DropdownMenuItem>
         <DropdownMenuItem onClick={toggleAvailability}>
           {item.is_available ? (
-            <>
-              <ToggleLeft className="h-4 w-4 mr-2" />
-              Deaktivieren
-            </>
+            <><ToggleLeft className="h-4 w-4 mr-2" />Sperren</>
           ) : (
-            <>
-              <ToggleRight className="h-4 w-4 mr-2" />
-              Aktivieren
-            </>
+            <><ToggleRight className="h-4 w-4 mr-2" />Freigeben</>
           )}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={deleteItem} className="text-red-600 focus:text-red-600">
+          <Trash2 className="h-4 w-4 mr-2" />
+          Löschen
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
