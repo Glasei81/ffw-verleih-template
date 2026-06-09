@@ -2,11 +2,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getAvailableItems } from "@/lib/db"
 import ReservationForm from "@/components/reservation-form"
 import Link from "next/link"
+import { SKYLINE_JPG } from "@/lib/images"
 
 export const dynamic = "force-dynamic"
 
 export default async function HomePage() {
   const availableItems = await getAvailableItems()
+  const fmt = (p: unknown) => Number(p).toLocaleString("de-DE")
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-gray-100">
@@ -24,6 +26,15 @@ export default async function HomePage() {
         </div>
       </header>
 
+      <div className="w-full overflow-hidden" style={{ height: "140px" }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={SKYLINE_JPG}
+          alt="FFW Raubling Skyline"
+          className="w-full h-full object-cover object-right"
+        />
+      </div>
+
       <main className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           <div>
@@ -34,7 +45,7 @@ export default async function HomePage() {
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center justify-between">
                       <span>{item.name}</span>
-                      <span className="text-lg font-bold text-red-600">{item.price_per_day}€/Tag</span>
+                      <span className="text-lg font-bold text-red-600">{fmt(item.price_per_day)} € Pauschale</span>
                     </CardTitle>
                   </CardHeader>
                   {item.description && (
