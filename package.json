@@ -22,7 +22,7 @@
     "geist": "latest",
     "jose": "latest",
     "lucide-react": "^0.454.0",
-    "next": "latest",
+    "next": "15.5.19",
     "react": "^19",
     "react-dom": "^19",
     "resend": "^4.0.0",

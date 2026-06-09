@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { SKYLINE_PNG } from "@/lib/images"
 
 export default function AdminHeader() {
   const router = useRouter()
@@ -20,8 +21,9 @@ export default function AdminHeader() {
     <header className="bg-white shadow-sm border-b">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between py-3 gap-2">
-          <Link href="/admin" className="text-base font-bold text-red-600 whitespace-nowrap">
-            FFW Raubling
+          <Link href="/admin" className="flex items-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={SKYLINE_PNG} alt="FFW Raubling" className="h-10 w-auto" />
           </Link>
           <nav className="flex space-x-3 flex-1 justify-center">
             <Link href="/admin" className="text-sm text-gray-600 hover:text-red-600 font-medium whitespace-nowrap">
