@@ -29,9 +29,9 @@ export default function InventoryForm({ item }: InventoryFormProps) {
   const [formData, setFormData] = useState({
     name: item?.name || "",
     description: item?.description || "",
-    price_per_day: item?.price_per_day || 0,
+    price_per_day: item?.price_per_day ?? "",
     is_available: item?.is_available ?? true,
-    quantity: item?.quantity ?? 1,
+    quantity: item?.quantity ?? "",
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
@@ -48,7 +48,11 @@ export default function InventoryForm({ item }: InventoryFormProps) {
       const response = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          price_per_day: Number(formData.price_per_day) || 0,
+          quantity: Number(formData.quantity) || 1,
+        }),
       })
 
       const data = await response.json()
@@ -59,7 +63,7 @@ export default function InventoryForm({ item }: InventoryFormProps) {
       } else {
         setError(data.error || "Fehler beim Speichern des Artikels")
       }
-    } catch (error) {
+    } catch {
       setError("Ein Fehler ist aufgetreten")
     } finally {
       setIsLoading(false)
@@ -86,7 +90,7 @@ export default function InventoryForm({ item }: InventoryFormProps) {
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
-              placeholder="z.B. Beamer, Lautsprecher Set"
+              placeholder="z.B. Biertischgarnitur, Zelt"
             />
           </div>
 
@@ -96,34 +100,40 @@ export default function InventoryForm({ item }: InventoryFormProps) {
               id="description"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Detaillierte Beschreibung des Artikels..."
-              rows={3}
+              placeholder="z.B. inkl. 2 Bänke, klappbar"
+              rows={2}
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="price_per_day">Preis pro Tag (€) *</Label>
-            <Input
-              id="price_per_day"
-              type="number"
-              step="0.01"
-              min="0"
-              value={formData.price_per_day}
-              onChange={(e) => setFormData({ ...formData, price_per_day: Number.parseFloat(e.target.value) || 0 })}
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="quantity">Anzahl verfügbar *</Label>
-            <Input
-              id="quantity"
-              type="number"
-              min="0"
-              value={formData.quantity}
-              onChange={(e) => setFormData({ ...formData, quantity: Number.parseInt(e.target.value) || 0 })}
-              required
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="price_per_day">Pauschale (€) *</Label>
+              <Input
+                id="price_per_day"
+                type="number"
+                min="0"
+                step="1"
+                value={formData.price_per_day}
+                onChange={(e) => setFormData({ ...formData, price_per_day: e.target.value })}
+                onFocus={(e) => e.target.select()}
+                placeholder="z.B. 10"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="quantity">Anzahl verfügbar *</Label>
+              <Input
+                id="quantity"
+                type="number"
+                min="0"
+                step="1"
+                value={formData.quantity}
+                onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                onFocus={(e) => e.target.select()}
+                placeholder="z.B. 10"
+                required
+              />
+            </div>
           </div>
 
           <div className="flex items-center space-x-2">
@@ -132,7 +142,7 @@ export default function InventoryForm({ item }: InventoryFormProps) {
               checked={formData.is_available}
               onCheckedChange={(checked) => setFormData({ ...formData, is_available: checked })}
             />
-            <Label htmlFor="is_available">Artikel ist verfügbar</Label>
+            <Label htmlFor="is_available">Artikel verfügbar</Label>
           </div>
 
           <div className="flex gap-4">
