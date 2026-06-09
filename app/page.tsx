@@ -31,17 +31,16 @@ export default async function HomePage() {
             <div className="space-y-4">
               {availableItems.map((item) => (
                 <Card key={item.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-3">
+                  <CardHeader className="pb-2">
                     <CardTitle className="flex items-center justify-between">
                       <span>{item.name}</span>
                       <span className="text-lg font-bold text-red-600">{item.price_per_day}€/Tag</span>
                     </CardTitle>
                   </CardHeader>
-                  {item.description && (
-                    <CardContent>
-                      <p className="text-gray-600">{item.description}</p>
-                    </CardContent>
-                  )}
+                  <CardContent className="pt-0">
+                    {item.description && <p className="text-gray-600 text-sm mb-1">{item.description}</p>}
+                    <p className="text-sm text-gray-400">{item.quantity ?? 1} Stück verfügbar</p>
+                  </CardContent>
                 </Card>
               ))}
               {availableItems.length === 0 && (

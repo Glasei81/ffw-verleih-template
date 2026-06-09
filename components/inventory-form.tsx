@@ -17,6 +17,7 @@ interface InventoryItem {
   description: string
   price_per_day: number
   is_available: boolean
+  quantity: number
 }
 
 interface InventoryFormProps {
@@ -30,6 +31,7 @@ export default function InventoryForm({ item }: InventoryFormProps) {
     description: item?.description || "",
     price_per_day: item?.price_per_day || 0,
     is_available: item?.is_available ?? true,
+    quantity: item?.quantity ?? 1,
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
@@ -112,6 +114,18 @@ export default function InventoryForm({ item }: InventoryFormProps) {
             />
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="quantity">Anzahl verfügbar *</Label>
+            <Input
+              id="quantity"
+              type="number"
+              min="0"
+              value={formData.quantity}
+              onChange={(e) => setFormData({ ...formData, quantity: Number.parseInt(e.target.value) || 0 })}
+              required
+            />
+          </div>
+
           <div className="flex items-center space-x-2">
             <Switch
               id="is_available"
@@ -122,7 +136,7 @@ export default function InventoryForm({ item }: InventoryFormProps) {
           </div>
 
           <div className="flex gap-4">
-            <Button type="submit" disabled={isLoading} className="bg-blue-600 hover:bg-blue-700">
+            <Button type="submit" disabled={isLoading} className="bg-red-600 hover:bg-red-700">
               {isLoading ? "Wird gespeichert..." : item ? "Änderungen speichern" : "Artikel hinzufügen"}
             </Button>
             <Button type="button" variant="outline" onClick={() => router.back()}>

@@ -87,6 +87,7 @@ export async function updateInventoryItem(
     description?: string
     price_per_day?: number
     is_available?: boolean
+    quantity?: number
   },
 ) {
   const current = await getInventoryById(id)
@@ -96,10 +97,12 @@ export async function updateInventoryItem(
   const description = updates.description !== undefined ? updates.description : current.description
   const price_per_day = updates.price_per_day ?? current.price_per_day
   const is_available = updates.is_available !== undefined ? updates.is_available : current.is_available
+  const quantity = updates.quantity !== undefined ? updates.quantity : (current.quantity ?? 1)
 
   const result = await sql`
     UPDATE inventory
-    SET name = ${name}, description = ${description}, price_per_day = ${price_per_day}, is_available = ${is_available}, updated_at = NOW()
+    SET name = ${name}, description = ${description}, price_per_day = ${price_per_day},
+        is_available = ${is_available}, quantity = ${quantity}, updated_at = NOW()
     WHERE id = ${id}
     RETURNING *
   `
