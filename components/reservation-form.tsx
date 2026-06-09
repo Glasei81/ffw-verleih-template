@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CheckCircle, Check, AlertTriangle } from "lucide-react"
+import { CheckCircle, Check, AlertTriangle, Minus, Plus } from "lucide-react"
 import Link from "next/link"
 
 interface InventoryItem {
@@ -23,7 +23,8 @@ interface ReservationFormProps {
 }
 
 export default function ReservationForm({ availableItems }: ReservationFormProps) {
-  const [selectedIds, setSelectedIds] = useState<number[]>([])
+  // selectedItems: { itemId -> quantity }
+  const [selectedItems, setSelectedItems] = useState<Record<number, number>>({})
   const [formData, setFormData] = useState({
     renterName: "",
     renterEmail: "",
@@ -36,10 +37,24 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState("")
 
+  const selectedIds = Object.keys(selectedItems).map(Number)
+
   const toggleItem = (id: number) => {
-    setSelectedIds((prev) => prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id])
+    setSelectedItems((prev) => {
+      if (id in prev) {
+        const next = { ...prev }
+        delete next[id]
+        return next
+      }
+      return { ...prev, [id]: 1 }
+    })
   }
 
+  const setQty = (id: number, qty: number) => {
+    setSelectedItems((prev) => ({ ...prev, [id]: Math.max(1, qty) }))
+  }
+
+  // Pauschale: Preis pro Artikel einmal, egal wie viele Stück
   const totalPrice = selectedIds.reduce((sum, id) => {
     const item = availableItems.find((i) => i.id === id)
     return sum + (item?.price_per_day ?? 0)
@@ -54,11 +69,27 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
     setIsLoading(true)
     setError("")
 
+    // Mengenangaben als Zusatzinfo in die Notizen
+    const qtyInfo = selectedIds
+      .map((id) => {
+        const item = availableItems.find((i) => i.id === id)
+        const qty = selectedItems[id]
+        return qty > 1 ? `${item?.name}: ${qty} Stück` : null
+      })
+      .filter(Boolean)
+      .join(", ")
+
+    const combinedNotes = [qtyInfo, formData.notes].filter(Boolean).join(" | ")
+
     try {
       const response = await fetch("/api/reservations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formData, itemIds: selectedIds }),
+        body: JSON.stringify({
+          ...formData,
+          notes: combinedNotes,
+          itemIds: selectedIds,
+        }),
       })
       const data = await response.json()
       if (response.ok) {
@@ -80,7 +111,7 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
         <h3 className="text-xl font-bold text-gray-900 mb-2">Anfrage erfolgreich gesendet!</h3>
         <p className="text-gray-600 mb-6">Deine Anfrage ist bei uns angekommen. Wir melden uns bald bei dir.</p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Button onClick={() => { setSuccess(false); setSelectedIds([]) }} variant="outline">
+          <Button onClick={() => { setSuccess(false); setSelectedItems({}) }} variant="outline">
             Weitere Anfrage
           </Button>
           <Link href="/">
@@ -103,28 +134,54 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
         <Label>Welche Artikel? *</Label>
         <div className="space-y-2">
           {availableItems.map((item) => {
-            const selected = selectedIds.includes(item.id)
+            const selected = item.id in selectedItems
+            const qty = selectedItems[item.id] ?? 1
             return (
-              <div
-                key={item.id}
-                onClick={() => toggleItem(item.id)}
-                className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
-                  selected ? "border-red-500 bg-red-50" : "border-gray-200 hover:border-gray-300"
-                }`}
-              >
-                <div className="flex-1 mr-3">
-                  <p className="font-medium text-sm">{item.name}</p>
-                  {item.description && <p className="text-xs text-gray-500">{item.description}</p>}
-                  <p className="text-xs text-gray-400">{item.quantity ?? 1} Stück verfügbar</p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-sm font-bold text-red-600">{item.price_per_day}€</span>
-                  <div className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 ${
-                    selected ? "bg-red-600 border-red-600" : "border-gray-300"
-                  }`}>
-                    {selected && <Check className="w-3 h-3 text-white" />}
+              <div key={item.id} className={`rounded-lg border transition-colors ${
+                selected ? "border-red-400 bg-red-50" : "border-gray-200"
+              }`}>
+                {/* Auswahlzeile */}
+                <div
+                  className="flex items-center justify-between p-3 cursor-pointer"
+                  onClick={() => toggleItem(item.id)}
+                >
+                  <div className="flex-1 mr-3">
+                    <p className="font-medium text-sm">{item.name}</p>
+                    {item.description && <p className="text-xs text-gray-500">{item.description}</p>}
+                    <p className="text-xs text-gray-400">{item.quantity ?? 1} Stück vorhanden</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-sm font-bold text-red-600">{item.price_per_day}€</span>
+                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
+                      selected ? "bg-red-600 border-red-600" : "border-gray-300 bg-white"
+                    }`}>
+                      {selected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                    </div>
                   </div>
                 </div>
+                {/* Mengenauswahl (nur wenn ausgewählt) */}
+                {selected && (
+                  <div className="flex items-center gap-3 px-3 pb-3">
+                    <span className="text-xs text-gray-500">Benötigte Menge:</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setQty(item.id, qty - 1) }}
+                        className="w-6 h-6 rounded border flex items-center justify-center hover:bg-gray-100"
+                      >
+                        <Minus className="w-3 h-3" />
+                      </button>
+                      <span className="w-8 text-center text-sm font-medium">{qty}</span>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setQty(item.id, qty + 1) }}
+                        className="w-6 h-6 rounded border flex items-center justify-center hover:bg-gray-100"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )
           })}
@@ -178,7 +235,7 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
         <Label htmlFor="notes">Anmerkungen</Label>
         <Textarea id="notes" value={formData.notes}
           onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-          placeholder="Besondere Wünsche oder Hinweise..." rows={3} />
+          placeholder="Besondere Wünsche oder Hinweise..." rows={2} />
       </div>
 
       <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex gap-2">
