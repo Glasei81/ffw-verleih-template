@@ -11,35 +11,36 @@ export default async function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-gray-100">
       <header className="bg-white shadow-sm">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-red-600">FFW Raubling – Geräteverleih</h1>
-              <p className="text-gray-600">Geräte und Ausstattung ausleihen</p>
+              <h1 className="text-xl font-bold text-red-600 leading-tight">FFW Raubling</h1>
+              <p className="text-base font-semibold text-gray-700">Geräteverleih</p>
+              <p className="text-sm text-gray-500">Geräte und Ausstattung ausleihen</p>
             </div>
-            <Link href="/login" className="text-sm text-gray-500 hover:text-red-600 font-medium">
+            <Link href="/login" className="text-sm text-gray-400 hover:text-red-600 font-medium mt-1">
               Admin
             </Link>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+      <main className="container mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Verfügbare Artikel</h2>
-            <div className="space-y-4">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Verfügbare Artikel</h2>
+            <div className="space-y-3">
               {availableItems.map((item) => (
                 <Card key={item.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="flex items-center justify-between">
+                  <CardHeader className="pb-1 pt-4">
+                    <CardTitle className="flex items-center justify-between text-base">
                       <span>{item.name}</span>
-                      <span className="text-lg font-bold text-red-600">{item.price_per_day}€/Tag</span>
+                      <span className="text-base font-bold text-red-600 whitespace-nowrap ml-2">{item.price_per_day}€/Tag</span>
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-0">
+                  <CardContent className="pb-4 pt-1">
                     {item.description && <p className="text-gray-600 text-sm mb-1">{item.description}</p>}
-                    <p className="text-sm text-gray-400">{item.quantity ?? 1} Stück verfügbar</p>
+                    <p className="text-xs text-gray-400">{item.quantity ?? 1} Stück verfügbar</p>
                   </CardContent>
                 </Card>
               ))}
@@ -54,7 +55,7 @@ export default async function HomePage() {
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Ausleihe anfragen</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Ausleihe anfragen</h2>
             <Card className="shadow-lg">
               <CardContent className="p-6">
                 <ReservationForm availableItems={availableItems} />
@@ -64,11 +65,9 @@ export default async function HomePage() {
         </div>
       </main>
 
-      <footer className="bg-white border-t mt-16">
-        <div className="container mx-auto px-4 py-6">
-          <p className="text-center text-gray-500 text-sm">
-            Freiwillige Feuerwehr Raubling
-          </p>
+      <footer className="bg-white border-t mt-12">
+        <div className="container mx-auto px-4 py-4">
+          <p className="text-center text-gray-400 text-sm">Freiwillige Feuerwehr Raubling</p>
         </div>
       </footer>
     </div>

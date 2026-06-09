@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle } from "lucide-react"
+import Link from "next/link"
 
 interface InventoryItem {
   id: number
@@ -67,20 +68,11 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
 
       if (response.ok) {
         setSuccess(true)
-        setFormData({
-          itemId: "",
-          renterName: "",
-          renterEmail: "",
-          renterPhone: "",
-          startDate: "",
-          endDate: "",
-          notes: "",
-        })
       } else {
-        setError(data.error || "Fehler beim Senden der Reservierung")
+        setError(data.error || "Fehler beim Senden der Anfrage")
       }
-    } catch (error) {
-      setError("Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.")
+    } catch {
+      setError("Ein Fehler ist aufgetreten. Bitte versuch es nochmal.")
     } finally {
       setIsLoading(false)
     }
@@ -90,17 +82,24 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
     return (
       <div className="text-center py-8">
         <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-        <h3 className="text-xl font-bold text-gray-900 mb-2">Reservierung erfolgreich gesendet!</h3>
-        <p className="text-gray-600 mb-6">Ihre Anfrage wurde übermittelt. Wir werden uns in Kürze bei Ihnen melden.</p>
-        <Button onClick={() => setSuccess(false)} className="bg-blue-600 hover:bg-blue-700">
-          Neue Reservierung
-        </Button>
+        <h3 className="text-xl font-bold text-gray-900 mb-2">Anfrage erfolgreich gesendet!</h3>
+        <p className="text-gray-600 mb-6">Deine Anfrage ist bei uns angekommen. Wir melden uns bald bei dir.</p>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <Button onClick={() => setSuccess(false)} variant="outline">
+            Weitere Anfrage
+          </Button>
+          <Link href="/">
+            <Button className="bg-red-600 hover:bg-red-700 w-full sm:w-auto">
+              Zur Startseite
+            </Button>
+          </Link>
+        </div>
       </div>
     )
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-5">
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
@@ -108,24 +107,24 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="itemId">Artikel auswählen *</Label>
+        <Label htmlFor="itemId">Welcher Artikel? *</Label>
         <Select value={formData.itemId} onValueChange={(value) => setFormData({ ...formData, itemId: value })}>
           <SelectTrigger>
-            <SelectValue placeholder="Wählen Sie einen Artikel" />
+            <SelectValue placeholder="Artikel auswählen" />
           </SelectTrigger>
           <SelectContent>
             {availableItems.map((item) => (
               <SelectItem key={item.id} value={item.id.toString()}>
-                {item.name} - {item.price_per_day}€/Tag
+                {item.name} – {item.price_per_day}€/Tag
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
-          <Label htmlFor="startDate">Startdatum *</Label>
+          <Label htmlFor="startDate">Von *</Label>
           <Input
             id="startDate"
             type="date"
@@ -136,7 +135,7 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="endDate">Enddatum *</Label>
+          <Label htmlFor="endDate">Bis *</Label>
           <Input
             id="endDate"
             type="date"
@@ -149,18 +148,18 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
       </div>
 
       {totalPrice > 0 && (
-        <div className="bg-blue-50 p-4 rounded-lg">
+        <div className="bg-red-50 p-3 rounded-lg">
           <div className="flex justify-between items-center">
-            <span className="font-medium">
+            <span className="font-medium text-sm">
               Gesamtpreis ({totalDays} Tag{totalDays !== 1 ? "e" : ""}):
             </span>
-            <span className="text-xl font-bold text-blue-600">{totalPrice.toFixed(2)}€</span>
+            <span className="text-lg font-bold text-red-600">{totalPrice.toFixed(2)}€</span>
           </div>
         </div>
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="renterName">Ihr Name *</Label>
+        <Label htmlFor="renterName">Dein Name *</Label>
         <Input
           id="renterName"
           value={formData.renterName}
@@ -171,7 +170,7 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="renterEmail">E-Mail Adresse *</Label>
+        <Label htmlFor="renterEmail">Deine E-Mail *</Label>
         <Input
           id="renterEmail"
           type="email"
@@ -194,26 +193,26 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="notes">Zusätzliche Notizen</Label>
+        <Label htmlFor="notes">Anmerkungen</Label>
         <Textarea
           id="notes"
           value={formData.notes}
           onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-          placeholder="Besondere Wünsche oder Anmerkungen..."
+          placeholder="Besondere Wünsche oder Hinweise..."
           rows={3}
         />
       </div>
 
       <Button
         type="submit"
-        className="w-full bg-blue-600 hover:bg-blue-700"
+        className="w-full bg-red-600 hover:bg-red-700"
         disabled={isLoading || availableItems.length === 0}
       >
-        {isLoading ? "Wird gesendet..." : "Reservierung anfragen"}
+        {isLoading ? "Wird gesendet..." : "Jetzt anfragen"}
       </Button>
 
-      <p className="text-sm text-gray-600 text-center">
-        * Pflichtfelder. Ihre Anfrage wird an unsere Administratoren weitergeleitet.
+      <p className="text-xs text-gray-400 text-center">
+        * Pflichtfelder. Deine Anfrage geht direkt an den Admin.
       </p>
     </form>
   )
