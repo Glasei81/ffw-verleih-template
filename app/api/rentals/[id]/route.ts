@@ -1,10 +1,16 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { updateRentalStatus } from "@/lib/db"
+import { getSession } from "@/lib/auth"
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 })
+  }
+
   try {
     const { id: idStr } = await params
     const id = Number.parseInt(idStr)

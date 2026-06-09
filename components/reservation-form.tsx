@@ -6,9 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CheckCircle } from "lucide-react"
+import { CheckCircle, Check } from "lucide-react"
 import Link from "next/link"
 
 interface InventoryItem {
@@ -16,6 +15,7 @@ interface InventoryItem {
   name: string
   price_per_day: number
   description: string
+  quantity: number
 }
 
 interface ReservationFormProps {
@@ -23,8 +23,8 @@ interface ReservationFormProps {
 }
 
 export default function ReservationForm({ availableItems }: ReservationFormProps) {
+  const [selectedIds, setSelectedIds] = useState<number[]>([])
   const [formData, setFormData] = useState({
-    itemId: "",
     renterName: "",
     renterEmail: "",
     renterPhone: "",
@@ -36,20 +36,34 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState("")
 
-  const selectedItem = availableItems.find((item) => item.id.toString() === formData.itemId)
+  const toggleItem = (id: number) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    )
+  }
+
   const totalDays =
     formData.startDate && formData.endDate
       ? Math.max(
           1,
           Math.ceil(
-            (new Date(formData.endDate).getTime() - new Date(formData.startDate).getTime()) / (1000 * 60 * 60 * 24),
-          ) + 1,
+            (new Date(formData.endDate).getTime() - new Date(formData.startDate).getTime()) /
+              (1000 * 60 * 60 * 24)
+          ) + 1
         )
       : 0
-  const totalPrice = selectedItem && totalDays ? selectedItem.price_per_day * totalDays : 0
+
+  const totalPrice = selectedIds.reduce((sum, id) => {
+    const item = availableItems.find((i) => i.id === id)
+    return sum + (item ? item.price_per_day * totalDays : 0)
+  }, 0)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (selectedIds.length === 0) {
+      setError("Bitte mindestens einen Artikel auswählen.")
+      return
+    }
     setIsLoading(true)
     setError("")
 
@@ -57,11 +71,7 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
       const response = await fetch("/api/reservations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          itemId: Number.parseInt(formData.itemId),
-          totalPrice,
-        }),
+        body: JSON.stringify({ ...formData, itemIds: selectedIds }),
       })
 
       const data = await response.json()
@@ -85,13 +95,11 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
         <h3 className="text-xl font-bold text-gray-900 mb-2">Anfrage erfolgreich gesendet!</h3>
         <p className="text-gray-600 mb-6">Deine Anfrage ist bei uns angekommen. Wir melden uns bald bei dir.</p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Button onClick={() => setSuccess(false)} variant="outline">
+          <Button onClick={() => { setSuccess(false); setSelectedIds([]) }} variant="outline">
             Weitere Anfrage
           </Button>
           <Link href="/">
-            <Button className="bg-red-600 hover:bg-red-700 w-full sm:w-auto">
-              Zur Startseite
-            </Button>
+            <Button className="bg-red-600 hover:bg-red-700 w-full sm:w-auto">Zur Startseite</Button>
           </Link>
         </div>
       </div>
@@ -107,19 +115,39 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="itemId">Welcher Artikel? *</Label>
-        <Select value={formData.itemId} onValueChange={(value) => setFormData({ ...formData, itemId: value })}>
-          <SelectTrigger>
-            <SelectValue placeholder="Artikel auswählen" />
-          </SelectTrigger>
-          <SelectContent>
-            {availableItems.map((item) => (
-              <SelectItem key={item.id} value={item.id.toString()}>
-                {item.name} – {item.price_per_day}€/Tag
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Label>Welche Artikel? *</Label>
+        <div className="space-y-2">
+          {availableItems.map((item) => {
+            const selected = selectedIds.includes(item.id)
+            return (
+              <div
+                key={item.id}
+                onClick={() => toggleItem(item.id)}
+                className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
+                  selected ? "border-red-500 bg-red-50" : "border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                <div className="flex-1 mr-3">
+                  <p className="font-medium text-sm">{item.name}</p>
+                  {item.description && (
+                    <p className="text-xs text-gray-500">{item.description}</p>
+                  )}
+                  <p className="text-xs text-gray-400">{item.quantity ?? 1} Stück verfügbar</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-sm font-bold text-red-600">{item.price_per_day}€/Tag</span>
+                  <div
+                    className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 ${
+                      selected ? "bg-red-600 border-red-600" : "border-gray-300"
+                    }`}
+                  >
+                    {selected && <Check className="w-3 h-3 text-white" />}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -151,7 +179,7 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
         <div className="bg-red-50 p-3 rounded-lg">
           <div className="flex justify-between items-center">
             <span className="font-medium text-sm">
-              Gesamtpreis ({totalDays} Tag{totalDays !== 1 ? "e" : ""}):
+              {selectedIds.length} Artikel, {totalDays} Tag{totalDays !== 1 ? "e" : ""}:
             </span>
             <span className="text-lg font-bold text-red-600">{totalPrice.toFixed(2)}€</span>
           </div>
@@ -211,9 +239,7 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
         {isLoading ? "Wird gesendet..." : "Jetzt anfragen"}
       </Button>
 
-      <p className="text-xs text-gray-400 text-center">
-        * Pflichtfelder. Deine Anfrage geht direkt an den Admin.
-      </p>
+      <p className="text-xs text-gray-400 text-center">* Pflichtfelder. Deine Anfrage geht direkt an den Admin.</p>
     </form>
   )
 }

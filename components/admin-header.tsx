@@ -10,8 +10,7 @@ export default function AdminHeader() {
   const handleLogout = async () => {
     try {
       await fetch("/api/auth/logout", { method: "POST" })
-      router.push("/login")
-      router.refresh()
+      router.push("/")
     } catch (error) {
       console.error("Logout error:", error)
     }
