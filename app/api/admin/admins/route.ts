@@ -7,7 +7,7 @@ export async function GET() {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 })
 
-  const admins = await sql`SELECT id, username, created_at FROM admins ORDER BY created_at ASC`
+  const admins = await sql`SELECT id, username, email, created_at FROM admins ORDER BY created_at ASC`
   return NextResponse.json(admins)
 }
 
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
   if (!session) return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 })
 
   try {
-    const { username, password } = await request.json()
+    const { username, password, email } = await request.json()
     if (!username?.trim() || !password) {
       return NextResponse.json({ error: "Benutzername und Passwort erforderlich" }, { status: 400 })
     }
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '"admin" ist reserviert' }, { status: 400 })
     }
     const hash = await bcrypt.hash(password, 10)
-    await sql`INSERT INTO admins (username, password_hash) VALUES (${username.trim()}, ${hash})`
+    await sql`INSERT INTO admins (username, password_hash, email) VALUES (${username.trim()}, ${hash}, ${email?.trim() || null})`
     return NextResponse.json({ success: true })
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : ""
@@ -33,6 +33,15 @@ export async function POST(request: NextRequest) {
     }
     return NextResponse.json({ error: "Interner Serverfehler" }, { status: 500 })
   }
+}
+
+export async function PATCH(request: NextRequest) {
+  const session = await getSession()
+  if (!session) return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 })
+
+  const { id, email } = await request.json()
+  await sql`UPDATE admins SET email = ${email?.trim() || null} WHERE id = ${id}`
+  return NextResponse.json({ success: true })
 }
 
 export async function DELETE(request: NextRequest) {

@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createRental, getInventoryById } from "@/lib/db"
+import { createRental, getInventoryById, sql } from "@/lib/db"
 import { Resend } from "resend"
 
 export async function POST(request: NextRequest) {
@@ -28,14 +28,12 @@ export async function POST(request: NextRequest) {
 
     const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
 
-    // Verfügbarkeit prüfen und Preise serverseitig berechnen
     const items = await Promise.all((itemIds as number[]).map((id) => getInventoryById(id)))
     const unavailable = items.filter((item) => !item || !item.is_available)
     if (unavailable.length > 0) {
       return NextResponse.json({ error: "Ein oder mehrere Artikel sind nicht verfügbar" }, { status: 400 })
     }
 
-    // Ausleihen erstellen
     const rentals = await Promise.all(
       items.map((item) =>
         createRental({
@@ -51,32 +49,37 @@ export async function POST(request: NextRequest) {
       )
     )
 
-    // E-Mail-Benachrichtigung
-    if (process.env.RESEND_API_KEY && process.env.ADMIN_EMAIL) {
+    // Alle Admin-E-Mails aus der Datenbank holen
+    if (process.env.RESEND_API_KEY) {
       try {
-        const resend = new Resend(process.env.RESEND_API_KEY)
-        const itemList = items.map((i) => `${i!.name} (${i!.price_per_day * days}€)`).join(", ")
-        const totalPrice = items.reduce((sum, i) => sum + i!.price_per_day * days, 0)
+        const adminRows = await sql`SELECT email FROM admins WHERE email IS NOT NULL AND email != ''`
+        const adminEmails = adminRows.map((r: { email: string }) => r.email)
 
-        await resend.emails.send({
-          from: "FFW Raubling Verleih <onboarding@resend.dev>",
-          to: process.env.ADMIN_EMAIL,
-          subject: `Neue Ausleihanfrage von ${renterName}`,
-          html: `
-            <div style="font-family: sans-serif; max-width: 500px;">
-              <h2 style="color: #dc2626;">Neue Ausleihanfrage – FFW Raubling</h2>
-              <table style="width: 100%; border-collapse: collapse;">
-                <tr><td style="padding: 6px 0; color: #666;">Artikel</td><td style="padding: 6px 0; font-weight: bold;">${itemList}</td></tr>
-                <tr><td style="padding: 6px 0; color: #666;">Von</td><td style="padding: 6px 0;">${renterName}</td></tr>
-                <tr><td style="padding: 6px 0; color: #666;">E-Mail</td><td style="padding: 6px 0;">${renterEmail}</td></tr>
-                <tr><td style="padding: 6px 0; color: #666;">Telefon</td><td style="padding: 6px 0;">${renterPhone || "–"}</td></tr>
-                <tr><td style="padding: 6px 0; color: #666;">Zeitraum</td><td style="padding: 6px 0;">${startDate} bis ${endDate} (${days} Tag${days !== 1 ? "e" : ""})</td></tr>
-                <tr><td style="padding: 6px 0; color: #666;">Gesamtpreis</td><td style="padding: 6px 0; font-weight: bold; color: #dc2626;">${totalPrice}€</td></tr>
-                ${notes ? `<tr><td style="padding: 6px 0; color: #666;">Notizen</td><td style="padding: 6px 0;">${notes}</td></tr>` : ""}
-              </table>
-            </div>
-          `,
-        })
+        if (adminEmails.length > 0) {
+          const resend = new Resend(process.env.RESEND_API_KEY)
+          const itemList = items.map((i) => `${i!.name} (${i!.price_per_day * days}€)`).join(", ")
+          const totalPrice = items.reduce((sum, i) => sum + i!.price_per_day * days, 0)
+
+          await resend.emails.send({
+            from: "FFW Raubling Verleih <onboarding@resend.dev>",
+            to: adminEmails,
+            subject: `Neue Ausleihanfrage von ${renterName}`,
+            html: `
+              <div style="font-family: sans-serif; max-width: 500px;">
+                <h2 style="color: #dc2626;">Neue Ausleihanfrage – FFW Raubling</h2>
+                <table style="width: 100%; border-collapse: collapse;">
+                  <tr><td style="padding: 6px 0; color: #666;">Artikel</td><td style="padding: 6px 0; font-weight: bold;">${itemList}</td></tr>
+                  <tr><td style="padding: 6px 0; color: #666;">Von</td><td style="padding: 6px 0;">${renterName}</td></tr>
+                  <tr><td style="padding: 6px 0; color: #666;">E-Mail</td><td style="padding: 6px 0;">${renterEmail}</td></tr>
+                  <tr><td style="padding: 6px 0; color: #666;">Telefon</td><td style="padding: 6px 0;">${renterPhone || "–"}</td></tr>
+                  <tr><td style="padding: 6px 0; color: #666;">Zeitraum</td><td style="padding: 6px 0;">${startDate} bis ${endDate} (${days} Tag${days !== 1 ? "e" : ""})</td></tr>
+                  <tr><td style="padding: 6px 0; color: #666;">Gesamtpreis</td><td style="padding: 6px 0; font-weight: bold; color: #dc2626;">${totalPrice}€</td></tr>
+                  ${notes ? `<tr><td style="padding: 6px 0; color: #666;">Notizen</td><td style="padding: 6px 0;">${notes}</td></tr>` : ""}
+                </table>
+              </div>
+            `,
+          })
+        }
       } catch (emailError) {
         console.error("E-Mail konnte nicht gesendet werden:", emailError)
       }
