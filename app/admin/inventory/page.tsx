@@ -9,13 +9,15 @@ export default async function InventoryPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Inventar Verwaltung</h1>
-          <p className="text-gray-600 mt-2">Verwalten Sie Ihre Verleihgegenstände</p>
+          <h1 className="text-2xl font-bold text-gray-900">Inventar Verwaltung</h1>
+          <p className="text-gray-600 mt-1">Verwalten Sie Ihre Verleihgegenstände</p>
         </div>
         <Link href="/admin/inventory/add">
-          <Button className="bg-red-600 hover:bg-red-700">Neuen Artikel hinzufügen</Button>
+          <Button className="bg-red-600 hover:bg-red-700 w-full sm:w-auto">
+            Neuen Artikel hinzufügen
+          </Button>
         </Link>
       </div>
 
