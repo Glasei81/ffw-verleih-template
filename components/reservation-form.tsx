@@ -13,17 +13,18 @@ import Link from "next/link"
 interface InventoryItem {
   id: number
   name: string
-  price_per_day: number
+  price_per_day: number | string
   description: string
   quantity: number
 }
+
+const fmt = (p: number | string) => Number(p).toLocaleString("de-DE")
 
 interface ReservationFormProps {
   availableItems: InventoryItem[]
 }
 
 export default function ReservationForm({ availableItems }: ReservationFormProps) {
-  // selectedItems: { itemId -> quantity }
   const [selectedItems, setSelectedItems] = useState<Record<number, number>>({})
   const [formData, setFormData] = useState({
     renterName: "",
@@ -54,10 +55,10 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
     setSelectedItems((prev) => ({ ...prev, [id]: Math.max(1, qty) }))
   }
 
-  // Pauschale: Preis pro Artikel einmal, egal wie viele Stück
+  // Pauschale: Preis einmal pro Artikel, unabhängig von der Menge
   const totalPrice = selectedIds.reduce((sum, id) => {
     const item = availableItems.find((i) => i.id === id)
-    return sum + (item?.price_per_day ?? 0)
+    return sum + Number(item?.price_per_day ?? 0)
   }, 0)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -69,7 +70,6 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
     setIsLoading(true)
     setError("")
 
-    // Mengenangaben als Zusatzinfo in die Notizen
     const qtyInfo = selectedIds
       .map((id) => {
         const item = availableItems.find((i) => i.id === id)
@@ -85,11 +85,7 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
       const response = await fetch("/api/reservations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          notes: combinedNotes,
-          itemIds: selectedIds,
-        }),
+        body: JSON.stringify({ ...formData, notes: combinedNotes, itemIds: selectedIds }),
       })
       const data = await response.json()
       if (response.ok) {
@@ -111,9 +107,7 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
         <h3 className="text-xl font-bold text-gray-900 mb-2">Anfrage erfolgreich gesendet!</h3>
         <p className="text-gray-600 mb-6">Deine Anfrage ist bei uns angekommen. Wir melden uns bald bei dir.</p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Button onClick={() => { setSuccess(false); setSelectedItems({}) }} variant="outline">
-            Weitere Anfrage
-          </Button>
+          <Button onClick={() => { setSuccess(false); setSelectedItems({}) }} variant="outline">Weitere Anfrage</Button>
           <Link href="/">
             <Button className="bg-red-600 hover:bg-red-700 w-full sm:w-auto">Zur Startseite</Button>
           </Link>
@@ -124,11 +118,7 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+      {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
 
       <div className="space-y-2">
         <Label>Welche Artikel? *</Label>
@@ -140,18 +130,14 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
               <div key={item.id} className={`rounded-lg border transition-colors ${
                 selected ? "border-red-400 bg-red-50" : "border-gray-200"
               }`}>
-                {/* Auswahlzeile */}
-                <div
-                  className="flex items-center justify-between p-3 cursor-pointer"
-                  onClick={() => toggleItem(item.id)}
-                >
+                <div className="flex items-center justify-between p-3 cursor-pointer" onClick={() => toggleItem(item.id)}>
                   <div className="flex-1 mr-3">
                     <p className="font-medium text-sm">{item.name}</p>
                     {item.description && <p className="text-xs text-gray-500">{item.description}</p>}
                     <p className="text-xs text-gray-400">{item.quantity ?? 1} Stück vorhanden</p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-sm font-bold text-red-600">{item.price_per_day}€</span>
+                    <span className="text-sm font-bold text-red-600">{fmt(item.price_per_day)}€</span>
                     <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
                       selected ? "bg-red-600 border-red-600" : "border-gray-300 bg-white"
                     }`}>
@@ -159,24 +145,17 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
                     </div>
                   </div>
                 </div>
-                {/* Mengenauswahl (nur wenn ausgewählt) */}
                 {selected && (
                   <div className="flex items-center gap-3 px-3 pb-3">
                     <span className="text-xs text-gray-500">Benötigte Menge:</span>
                     <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); setQty(item.id, qty - 1) }}
-                        className="w-6 h-6 rounded border flex items-center justify-center hover:bg-gray-100"
-                      >
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setQty(item.id, qty - 1) }}
+                        className="w-6 h-6 rounded border flex items-center justify-center hover:bg-gray-100">
                         <Minus className="w-3 h-3" />
                       </button>
                       <span className="w-8 text-center text-sm font-medium">{qty}</span>
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); setQty(item.id, qty + 1) }}
-                        className="w-6 h-6 rounded border flex items-center justify-center hover:bg-gray-100"
-                      >
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setQty(item.id, qty + 1) }}
+                        className="w-6 h-6 rounded border flex items-center justify-center hover:bg-gray-100">
                         <Plus className="w-3 h-3" />
                       </button>
                     </div>
@@ -191,7 +170,7 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
       {totalPrice > 0 && (
         <div className="bg-red-50 p-3 rounded-lg flex justify-between items-center">
           <span className="font-medium text-sm">{selectedIds.length} Artikel ausgewählt:</span>
-          <span className="text-lg font-bold text-red-600">{totalPrice}€ Pauschale</span>
+          <span className="text-lg font-bold text-red-600">{fmt(totalPrice)}€ Pauschale</span>
         </div>
       )}
 

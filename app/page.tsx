@@ -5,6 +5,8 @@ import Link from "next/link"
 
 export const dynamic = "force-dynamic"
 
+const fmt = (p: unknown) => Number(p).toLocaleString("de-DE")
+
 export default async function HomePage() {
   const availableItems = await getAvailableItems()
 
@@ -33,12 +35,12 @@ export default async function HomePage() {
                   <CardHeader className="pb-1 pt-4">
                     <CardTitle className="flex items-center justify-between text-base">
                       <span>{item.name}</span>
-                      <span className="text-base font-bold text-red-600 whitespace-nowrap ml-2">{item.price_per_day}€</span>
+                      <span className="text-base font-bold text-red-600 whitespace-nowrap ml-2">{fmt(item.price_per_day)}€</span>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pb-4 pt-1">
                     {item.description && <p className="text-gray-600 text-sm mb-1">{item.description}</p>}
-                    <p className="text-xs text-gray-400">{item.quantity ?? 1} Stück verfügbar</p>
+                    <p className="text-xs text-gray-400">{item.quantity ?? 1} Stück vorhanden</p>
                   </CardContent>
                 </Card>
               ))}
