@@ -34,6 +34,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Ein oder mehrere Artikel sind nicht verfügbar" }, { status: 400 })
     }
 
+    // Überschneidung mit bestätigten Ausleihen prüfen (Stückzahl berücksichtigen)
+    for (const item of items) {
+      const rows = await sql`
+        SELECT COUNT(*)::int AS count FROM rentals
+        WHERE item_id = ${item!.id}
+          AND status = 'confirmed'
+          AND start_date <= ${endDate}
+          AND end_date >= ${startDate}
+      `
+      const overlapping = Number(rows[0]?.count ?? 0)
+      const quantity = Number(item!.quantity ?? 1)
+      if (overlapping >= quantity) {
+        return NextResponse.json(
+          { error: `"${item!.name}" ist im gewählten Zeitraum bereits vergeben. Bitte anderen Zeitraum wählen.` },
+          { status: 400 },
+        )
+      }
+    }
+
     const rentals = await Promise.all(
       items.map((item) =>
         createRental({
