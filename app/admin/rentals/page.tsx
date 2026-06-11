@@ -49,17 +49,32 @@ export default async function RentalsPage({
 
       <div className="space-y-4">
         {filteredRentals.map((rental) => (
-          <Card key={rental.id} className="hover:shadow-md transition-shadow">
+          <Card
+            key={rental.id}
+            className={`hover:shadow-md transition-shadow ${rental.status === "pending" ? "border-yellow-300" : ""}`}
+          >
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg">{rental.item_name}</CardTitle>
                 <div className="flex items-center gap-2">
-                  <span className={`inline-block px-2 py-1 text-xs rounded-full font-medium ${
-                    statusColor[rental.status] || "bg-gray-100 text-gray-800"
-                  }`}>
+                  <span
+                    className={`inline-block px-2 py-1 text-xs rounded-full font-medium ${
+                      statusColor[rental.status] || "bg-gray-100 text-gray-800"
+                    }`}
+                  >
                     {statusLabel[rental.status] || rental.status}
                   </span>
-                  <RentalActions rental={rental} />
+                  <RentalActions
+                    rental={{
+                      id: rental.id,
+                      status: rental.status,
+                      renter_name: rental.renter_name,
+                      renter_email: rental.renter_email,
+                      item_name: rental.item_name,
+                      start_date: rental.start_date,
+                      end_date: rental.end_date,
+                    }}
+                  />
                 </div>
               </div>
             </CardHeader>
@@ -86,7 +101,14 @@ export default async function RentalsPage({
               </div>
               {rental.notes && (
                 <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                  <p className="text-xs font-medium text-gray-500 mb-1">Notiz</p>
                   <p className="text-sm text-gray-600">{rental.notes}</p>
+                </div>
+              )}
+              {rental.pickup_info && (
+                <div className="mt-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                  <p className="text-xs font-medium text-green-700 mb-1">Abholhinweis</p>
+                  <p className="text-sm text-green-800">{rental.pickup_info}</p>
                 </div>
               )}
             </CardContent>
