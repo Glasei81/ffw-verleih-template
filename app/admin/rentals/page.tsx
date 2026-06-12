@@ -39,16 +39,27 @@ function formatTs(ts: unknown) {
   })
 }
 
+const ACTIVE_STATUSES = ["pending", "confirmed"]
+const ARCHIVE_STATUSES = ["returned", "cancelled"]
+
 export default async function RentalsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string }>
+  searchParams: Promise<{ search?: string; tab?: string }>
 }) {
-  const { search } = await searchParams
+  const { search, tab } = await searchParams
   const allRequests = await getRentalRequests()
 
+  const isArchive = tab === "archiv"
+  const tabStatuses = isArchive ? ARCHIVE_STATUSES : ACTIVE_STATUSES
+
+  const activeCount = allRequests.filter((r) => ACTIVE_STATUSES.includes(r.status as string)).length
+  const archiveCount = allRequests.filter((r) => ARCHIVE_STATUSES.includes(r.status as string)).length
+
+  const byTab = allRequests.filter((r) => tabStatuses.includes(r.status as string))
+
   const filtered = search
-    ? allRequests.filter((req) => {
+    ? byTab.filter((req) => {
         const q = search.toLowerCase()
         const items = req.items as Array<{ item_name: string }> | null
         const itemMatch = items?.some((i) => i.item_name.toLowerCase().includes(q)) ?? false
@@ -58,7 +69,7 @@ export default async function RentalsPage({
           itemMatch
         )
       })
-    : allRequests
+    : byTab
 
   return (
     <div className="space-y-8">
@@ -67,7 +78,7 @@ export default async function RentalsPage({
         <p className="text-gray-600 mt-2">Übersicht aller Anfragen und Ausleihen</p>
       </div>
 
-      <RentalFilters />
+      <RentalFilters activeCount={activeCount} archiveCount={archiveCount} />
 
       <div className="space-y-4">
         {filtered.map((req) => {
@@ -172,7 +183,11 @@ export default async function RentalsPage({
         <Card>
           <CardContent className="text-center py-12">
             <p className="text-gray-500">
-              {search ? "Keine Ergebnisse für diese Suche." : "Noch keine Ausleihen vorhanden."}
+              {search
+              ? "Keine Ergebnisse für diese Suche."
+              : isArchive
+              ? "Noch keine archivierten Einträge."
+              : "Keine aktiven Anfragen vorhanden."}
             </p>
           </CardContent>
         </Card>
