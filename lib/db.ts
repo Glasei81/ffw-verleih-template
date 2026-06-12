@@ -83,6 +83,7 @@ export async function getRentals() {
  */
 export async function getRentalRequests() {
   try {
+    await ensureRentalsSchema()
     return await sql`
       SELECT
         MIN(r.id)                        AS id,
