@@ -6,6 +6,13 @@ if (!process.env.DATABASE_URL) {
 
 export const sql = neon(process.env.DATABASE_URL)
 
+/** Adds columns that may not exist in older deployments. Safe to call repeatedly. */
+export async function ensureRentalsSchema() {
+  await sql`ALTER TABLE rentals ADD COLUMN IF NOT EXISTS pickup_info TEXT`
+  await sql`ALTER TABLE rentals ADD COLUMN IF NOT EXISTS request_group UUID`
+  await sql`ALTER TABLE rentals ADD COLUMN IF NOT EXISTS requester_type VARCHAR(50) DEFAULT 'external'`
+}
+
 export async function getInventoryItems() {
   try {
     return await sql`SELECT * FROM inventory ORDER BY name ASC`
@@ -56,6 +63,7 @@ export async function deleteInventoryItem(id: number) {
   await sql`DELETE FROM inventory WHERE id = ${id}`
 }
 
+/** Legacy: individual rows. Used by admin overview counts. */
 export async function getRentals() {
   try {
     return await sql`
@@ -63,6 +71,50 @@ export async function getRentals() {
       FROM rentals r
       JOIN inventory i ON r.item_id = i.id
       ORDER BY r.created_at DESC
+    `
+  } catch {
+    return []
+  }
+}
+
+/**
+ * One entry per booking request. Items are aggregated into a JSON array.
+ * Uses COALESCE(request_group, id::TEXT) so old rows without a group each form their own entry.
+ */
+export async function getRentalRequests() {
+  try {
+    return await sql`
+      SELECT
+        MIN(r.id)                        AS id,
+        COALESCE(r.request_group::TEXT, r.id::TEXT) AS group_key,
+        r.renter_name,
+        r.renter_email,
+        r.renter_phone,
+        r.start_date,
+        r.end_date,
+        r.status,
+        MAX(r.notes)                     AS notes,
+        MAX(r.requester_type)            AS requester_type,
+        MAX(r.pickup_info)               AS pickup_info,
+        MIN(r.created_at)                AS created_at,
+        MAX(r.updated_at)                AS updated_at,
+        SUM(r.total_price)::NUMERIC      AS total_price,
+        JSON_AGG(
+          JSON_BUILD_OBJECT(
+            'id',            r.id,
+            'item_id',       r.item_id,
+            'item_name',     i.name,
+            'price_per_day', i.price_per_day,
+            'total_price',   r.total_price
+          ) ORDER BY r.id
+        ) AS items
+      FROM rentals r
+      JOIN inventory i ON r.item_id = i.id
+      GROUP BY
+        COALESCE(r.request_group::TEXT, r.id::TEXT),
+        r.renter_name, r.renter_email, r.renter_phone,
+        r.start_date, r.end_date, r.status
+      ORDER BY MIN(r.created_at) DESC
     `
   } catch {
     return []
@@ -78,11 +130,36 @@ export async function createRental(rental: {
   end_date: string
   total_price: number
   notes?: string
+  request_group?: string | null
+  requester_type?: string
 }) {
+  const rg = rental.request_group ?? null
+  const rt = rental.requester_type ?? "external"
+  if (rg) {
+    return await sql`
+      INSERT INTO rentals (
+        item_id, renter_name, renter_email, renter_phone,
+        start_date, end_date, total_price, notes,
+        request_group, requester_type
+      )
+      VALUES (
+        ${rental.item_id}, ${rental.renter_name}, ${rental.renter_email}, ${rental.renter_phone || null},
+        ${rental.start_date}, ${rental.end_date}, ${rental.total_price}, ${rental.notes || null},
+        ${rg}::UUID, ${rt}
+      )
+      RETURNING *
+    `
+  }
   return await sql`
-    INSERT INTO rentals (item_id, renter_name, renter_email, renter_phone, start_date, end_date, total_price, notes)
-    VALUES (${rental.item_id}, ${rental.renter_name}, ${rental.renter_email}, ${rental.renter_phone || null},
-            ${rental.start_date}, ${rental.end_date}, ${rental.total_price}, ${rental.notes || null})
+    INSERT INTO rentals (
+      item_id, renter_name, renter_email, renter_phone,
+      start_date, end_date, total_price, notes, requester_type
+    )
+    VALUES (
+      ${rental.item_id}, ${rental.renter_name}, ${rental.renter_email}, ${rental.renter_phone || null},
+      ${rental.start_date}, ${rental.end_date}, ${rental.total_price}, ${rental.notes || null},
+      ${rt}
+    )
     RETURNING *
   `
 }
@@ -91,6 +168,35 @@ export async function updateRentalStatus(id: number, status: string) {
   return await sql`
     UPDATE rentals SET status = ${status}, updated_at = NOW()
     WHERE id = ${id}
+    RETURNING *
+  `
+}
+
+/** Updates every rental row that belongs to the same booking request. */
+export async function updateRentalGroupStatus(
+  groupKey: string,
+  status: string,
+  pickupInfo?: string | null
+) {
+  const pi = pickupInfo || null
+  if (groupKey.includes("-")) {
+    // UUID-format group key
+    return await sql`
+      UPDATE rentals
+      SET status      = ${status},
+          pickup_info = COALESCE(${pi}, pickup_info),
+          updated_at  = NOW()
+      WHERE request_group = ${groupKey}::UUID
+      RETURNING *
+    `
+  }
+  // Fallback: plain integer id (old rows without a group)
+  return await sql`
+    UPDATE rentals
+    SET status      = ${status},
+        pickup_info = COALESCE(${pi}, pickup_info),
+        updated_at  = NOW()
+    WHERE id = ${Number.parseInt(groupKey)}
     RETURNING *
   `
 }

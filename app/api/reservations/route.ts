@@ -1,11 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createRental, getInventoryById, sql } from "@/lib/db"
+import { createRental, ensureRentalsSchema, getInventoryById, sql } from "@/lib/db"
 import { Resend } from "resend"
+import { randomUUID } from "crypto"
 
 export async function POST(request: NextRequest) {
   try {
     const data = await request.json()
-    const { renterName, renterEmail, renterPhone, startDate, endDate, notes, itemIds } = data
+    const { renterName, renterEmail, renterPhone, startDate, endDate, notes, itemIds, requesterType } = data
 
     if (!itemIds || !Array.isArray(itemIds) || itemIds.length === 0) {
       return NextResponse.json({ error: "Mindestens einen Artikel auswählen" }, { status: 400 })
@@ -53,6 +54,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Ensure new schema columns exist
+    await ensureRentalsSchema()
+
+    // All items in this submission share one group id
+    const requestGroup = randomUUID()
+    const rType = (requesterType as string) || "external"
+
     const rentals = await Promise.all(
       items.map((item) =>
         createRental({
@@ -64,20 +72,27 @@ export async function POST(request: NextRequest) {
           end_date: endDate,
           total_price: item!.price_per_day * days,
           notes,
+          request_group: requestGroup,
+          requester_type: rType,
         })
       )
     )
 
-    // Alle Admin-E-Mails aus der Datenbank holen
+    // Notify all admins
     if (process.env.RESEND_API_KEY) {
       try {
         const adminRows = await sql`SELECT email FROM admins WHERE email IS NOT NULL AND email != ''`
-        const adminEmails = adminRows.map((r: { email: string }) => r.email)
+        const adminEmails = adminRows.map((r) => r.email as string)
 
         if (adminEmails.length > 0) {
           const resend = new Resend(process.env.RESEND_API_KEY)
           const itemList = items.map((i) => `${i!.name} (${i!.price_per_day * days}€)`).join(", ")
           const totalPrice = items.reduce((sum, i) => sum + i!.price_per_day * days, 0)
+          const requesterLabels: Record<string, string> = {
+            ffw_member: "FFW-Mitglied Raubling",
+            partner: "Anderer Verein / Gemeinde",
+            external: "Privat / Extern",
+          }
 
           await resend.emails.send({
             from: "FFW Raubling Verleih <onboarding@resend.dev>",
@@ -89,6 +104,7 @@ export async function POST(request: NextRequest) {
                 <table style="width: 100%; border-collapse: collapse;">
                   <tr><td style="padding: 6px 0; color: #666;">Artikel</td><td style="padding: 6px 0; font-weight: bold;">${itemList}</td></tr>
                   <tr><td style="padding: 6px 0; color: #666;">Von</td><td style="padding: 6px 0;">${renterName}</td></tr>
+                  <tr><td style="padding: 6px 0; color: #666;">Art</td><td style="padding: 6px 0;">${requesterLabels[rType] ?? rType}</td></tr>
                   <tr><td style="padding: 6px 0; color: #666;">E-Mail</td><td style="padding: 6px 0;">${renterEmail}</td></tr>
                   <tr><td style="padding: 6px 0; color: #666;">Telefon</td><td style="padding: 6px 0;">${renterPhone || "–"}</td></tr>
                   <tr><td style="padding: 6px 0; color: #666;">Zeitraum</td><td style="padding: 6px 0;">${startDate} bis ${endDate} (${days} Tag${days !== 1 ? "e" : ""})</td></tr>

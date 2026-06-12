@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { updateRentalStatus, sql } from "@/lib/db"
+import { ensureRentalsSchema, updateRentalGroupStatus, updateRentalStatus, sql } from "@/lib/db"
 import { getSession } from "@/lib/auth"
 import { Resend } from "resend"
 
@@ -15,7 +15,7 @@ export async function PATCH(
   try {
     const { id: idStr } = await params
     const id = Number.parseInt(idStr)
-    const { status, pickupInfo, adminMessage } = await request.json()
+    const { status, pickupInfo, adminMessage, requestGroup } = await request.json()
 
     if (!status) {
       return NextResponse.json({ error: "Status ist erforderlich" }, { status: 400 })
@@ -26,11 +26,12 @@ export async function PATCH(
       return NextResponse.json({ error: "Ungültiger Status" }, { status: 400 })
     }
 
-    // Ensure pickup_info column exists (safe to repeat)
-    await sql`ALTER TABLE rentals ADD COLUMN IF NOT EXISTS pickup_info TEXT`
+    await ensureRentalsSchema()
 
     let result
-    if (pickupInfo) {
+    if (requestGroup) {
+      result = await updateRentalGroupStatus(requestGroup, status, pickupInfo || null)
+    } else if (pickupInfo) {
       result = await sql`
         UPDATE rentals
         SET status = ${status}, pickup_info = ${pickupInfo}, updated_at = NOW()
@@ -55,8 +56,23 @@ export async function PATCH(
     ) {
       try {
         const resend = new Resend(process.env.RESEND_API_KEY)
-        const itemResult = await sql`SELECT name FROM inventory WHERE id = ${rental.item_id} LIMIT 1`
-        const itemName = (itemResult[0]?.name as string | undefined) ?? "Artikel"
+
+        // Get all item names for this group
+        const gk = requestGroup ?? rental.request_group
+        let itemNamesStr: string
+        if (gk) {
+          const rows = await sql`
+            SELECT i.name FROM rentals r
+            JOIN inventory i ON r.item_id = i.id
+            WHERE r.request_group = ${gk}::UUID
+            ORDER BY r.id
+          `
+          itemNamesStr = rows.map((r) => r.name as string).join(", ")
+        } else {
+          const row = await sql`SELECT name FROM inventory WHERE id = ${rental.item_id} LIMIT 1`
+          itemNamesStr = (row[0]?.name as string | undefined) ?? "Artikel"
+        }
+
         const startDate = new Date(rental.start_date).toLocaleDateString("de-DE")
         const endDate = new Date(rental.end_date).toLocaleDateString("de-DE")
 
@@ -64,12 +80,12 @@ export async function PATCH(
           await resend.emails.send({
             from: "FFW Raubling Verleih <onboarding@resend.dev>",
             to: rental.renter_email,
-            subject: `Ihre Ausleihanfrage wurde bestätigt – ${itemName}`,
+            subject: `Ihre Ausleihanfrage wurde bestätigt – ${itemNamesStr}`,
             html: `
               <div style="font-family: sans-serif; max-width: 500px;">
                 <h2 style="color: #16a34a;">Ausleihe bestätigt – FFW Raubling</h2>
                 <p>Guten Tag ${rental.renter_name},</p>
-                <p>Ihre Anfrage für <strong>${itemName}</strong> (${startDate}–${endDate}) wurde bestätigt.</p>
+                <p>Ihre Anfrage für <strong>${itemNamesStr}</strong> (${startDate}–${endDate}) wurde bestätigt.</p>
                 ${pickupInfo ? `
                 <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin:16px 0;">
                   <strong>Abholhinweis:</strong><br>${pickupInfo}
@@ -83,12 +99,12 @@ export async function PATCH(
           await resend.emails.send({
             from: "FFW Raubling Verleih <onboarding@resend.dev>",
             to: rental.renter_email,
-            subject: `Ihre Ausleihanfrage – ${itemName}`,
+            subject: `Ihre Ausleihanfrage – ${itemNamesStr}`,
             html: `
               <div style="font-family: sans-serif; max-width: 500px;">
                 <h2 style="color: #dc2626;">Anfrage konnte nicht bestätigt werden – FFW Raubling</h2>
                 <p>Guten Tag ${rental.renter_name},</p>
-                <p>Leider können wir Ihre Anfrage für <strong>${itemName}</strong> (${startDate}–${endDate}) nicht bestätigen.</p>
+                <p>Leider können wir Ihre Anfrage für <strong>${itemNamesStr}</strong> (${startDate}–${endDate}) nicht bestätigen.</p>
                 ${adminMessage ? `<p><strong>Hinweis:</strong> ${adminMessage}</p>` : ""}
                 <p>Für Rückfragen wenden Sie sich bitte an die Freiwillige Feuerwehr Raubling.</p>
               </div>

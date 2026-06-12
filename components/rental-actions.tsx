@@ -11,9 +11,10 @@ interface RentalActionsProps {
   rental: {
     id: number
     status: string
+    group_key: string
     renter_name: string
     renter_email: string
-    item_name: string
+    item_name: string   // formatted item list, e.g. "Tisch, 2× Bank"
     start_date: string
     end_date: string
   }
@@ -28,7 +29,12 @@ export default function RentalActions({ rental }: RentalActionsProps) {
       const response = await fetch(`/api/rentals/${rental.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus, pickupInfo, adminMessage }),
+        body: JSON.stringify({
+          status: newStatus,
+          pickupInfo,
+          adminMessage,
+          requestGroup: rental.group_key,
+        }),
       })
       if (response.ok) {
         router.refresh()

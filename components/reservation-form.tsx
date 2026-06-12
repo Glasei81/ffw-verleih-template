@@ -26,6 +26,7 @@ interface ReservationFormProps {
 
 export default function ReservationForm({ availableItems }: ReservationFormProps) {
   const [selectedItems, setSelectedItems] = useState<Record<number, number>>({})
+  const [requesterType, setRequesterType] = useState("ffw_member")
   const [formData, setFormData] = useState({
     renterName: "",
     renterEmail: "",
@@ -85,7 +86,7 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
       const response = await fetch("/api/reservations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formData, notes: combinedNotes, itemIds: selectedIds }),
+        body: JSON.stringify({ ...formData, notes: combinedNotes, itemIds: selectedIds, requesterType }),
       })
       const data = await response.json()
       if (response.ok) {
@@ -119,6 +120,35 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+
+      <div className="space-y-2">
+        <Label>Wer stellt die Anfrage? *</Label>
+        <div className="grid grid-cols-3 gap-2">
+          {([
+            { value: "ffw_member", label: "FFW Raubling Mitglied" },
+            { value: "partner", label: "Verein / Gemeinde" },
+            { value: "external", label: "Privat / Extern" },
+          ] as const).map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setRequesterType(opt.value)}
+              className={`rounded-lg border p-2 text-xs font-medium text-center transition-colors ${
+                requesterType === opt.value
+                  ? "border-red-500 bg-red-50 text-red-700"
+                  : "border-gray-200 text-gray-600 hover:border-gray-300"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        {requesterType === "external" && (
+          <p className="text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
+            Externe Anfragen werden geprüft und können je nach Verfügbarkeit abgelehnt werden.
+          </p>
+        )}
+      </div>
 
       <div className="space-y-2">
         <Label>Welche Artikel? *</Label>
@@ -220,7 +250,9 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
       <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex gap-2">
         <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
         <p className="text-xs text-amber-800">
-          <strong>Hinweis:</strong> Dieses Angebot ist für FFW-Mitglieder. Schäden am Ausleihgut sind vom Ausleiher selbst zu tragen. Die FFW Raubling behält sich vor, Anfragen abzulehnen.
+          <strong>Hinweis:</strong> Schäden am Ausleihgut sind vom Ausleiher selbst zu tragen.
+          Die FFW Raubling behält sich vor, Anfragen abzulehnen.
+          Nach dem Absenden erhältst du eine Bestätigungs-E-Mail mit Abholzeit und -ort.
         </p>
       </div>
 
