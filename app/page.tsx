@@ -1,12 +1,10 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { getAvailableItems } from "@/lib/db"
 import ReservationForm from "@/components/reservation-form"
 import Link from "next/link"
 import { SKYLINE_JPG } from "@/lib/images"
 
 export const dynamic = "force-dynamic"
-
-const fmt = (p: unknown) => Number(p).toLocaleString("de-DE")
 
 export default async function HomePage() {
   const availableItems = await getAvailableItems()
@@ -36,41 +34,13 @@ export default async function HomePage() {
       </div>
 
       <main className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Verfügbare Artikel</h2>
-            <div className="space-y-3">
-              {availableItems.map((item) => (
-                <Card key={item.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-1 pt-4">
-                    <CardTitle className="flex items-center justify-between text-base">
-                      <span>{item.name}</span>
-                      <span className="text-base font-bold text-red-600 whitespace-nowrap ml-2">{fmt(item.price_per_day)}€</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pb-4 pt-1">
-                    {item.description && <p className="text-gray-600 text-sm mb-1">{item.description}</p>}
-                    <p className="text-xs text-gray-400">{item.quantity ?? 1} Stück vorhanden</p>
-                  </CardContent>
-                </Card>
-              ))}
-              {availableItems.length === 0 && (
-                <Card>
-                  <CardContent className="text-center py-8">
-                    <p className="text-gray-500">Derzeit sind keine Artikel verfügbar.</p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Ausleihe anfragen</h2>
-            <Card className="shadow-lg">
-              <CardContent className="p-6">
-                <ReservationForm availableItems={availableItems} />
-              </CardContent>
-            </Card>
-          </div>
+        <div className="max-w-lg mx-auto">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Ausleihe anfragen</h2>
+          <Card className="shadow-lg">
+            <CardContent className="p-6">
+              <ReservationForm availableItems={availableItems} />
+            </CardContent>
+          </Card>
         </div>
       </main>
 
