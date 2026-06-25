@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getInventoryItems } from "@/lib/db"
 import Link from "next/link"
 import InventoryActions from "@/components/inventory-actions"
+import SeedInventoryButton from "@/components/seed-inventory-button"
 
 const fmt = (p: unknown) => Number(p).toLocaleString("de-DE")
 
@@ -50,11 +51,8 @@ export default async function InventoryPage() {
 
       {inventory.length === 0 && (
         <Card>
-          <CardContent className="text-center py-12">
-            <p className="text-gray-500 mb-4">Noch keine Artikel im Inventar</p>
-            <Link href="/admin/inventory/add">
-              <Button className="bg-red-600 hover:bg-red-700">Ersten Artikel hinzufügen</Button>
-            </Link>
+          <CardContent>
+            <SeedInventoryButton />
           </CardContent>
         </Card>
       )}
