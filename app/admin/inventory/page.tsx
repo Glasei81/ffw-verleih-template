@@ -17,9 +17,12 @@ export default async function InventoryPage() {
           <h1 className="text-2xl font-bold text-gray-900">Inventar</h1>
           <p className="text-gray-600 mt-1">{inventory.length} Artikel</p>
         </div>
-        <Link href="/admin/inventory/add">
-          <Button className="bg-red-600 hover:bg-red-700 w-full sm:w-auto">Neuen Artikel hinzufügen</Button>
-        </Link>
+        <div className="flex gap-2 flex-wrap">
+          {inventory.length === 0 && <SeedInventoryButton />}
+          <Link href="/admin/inventory/add">
+            <Button className="bg-red-600 hover:bg-red-700 w-full sm:w-auto">Neuen Artikel hinzufügen</Button>
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

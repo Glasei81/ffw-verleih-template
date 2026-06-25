@@ -95,6 +95,22 @@ const ITEMS = [
   { name: "Lichterkette F, 40 m (48 Birnen)", description: "Sonstiges · Elektro", quantity: 1 },
 ]
 
+export async function GET() {
+  const session = await getSession()
+  if (!session) {
+    return new Response("Nicht eingeloggt. Bitte zuerst /login aufrufen.", { status: 401 })
+  }
+  const existing = await sql`SELECT COUNT(*)::int AS count FROM inventory`
+  const count = Number(existing[0]?.count ?? 0)
+  if (count > 0) {
+    return new Response(`Inventar hat bereits ${count} Artikel. Seed übersprungen.`, { status: 200 })
+  }
+  for (const item of ITEMS) {
+    await sql`INSERT INTO inventory (name, description, price_per_day, is_available, quantity) VALUES (${item.name}, ${item.description}, 0, true, ${item.quantity})`
+  }
+  return new Response(`OK – ${ITEMS.length} Artikel eingespielt. Zurück zu /admin/inventory`, { status: 200 })
+}
+
 export async function POST(request: NextRequest) {
   const session = await getSession()
   if (!session) {
