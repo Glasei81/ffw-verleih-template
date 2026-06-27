@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CheckCircle, Check, AlertTriangle, Minus, Plus, ChevronDown, ChevronRight } from "lucide-react"
+import { CheckCircle, Check, AlertTriangle, Minus, Plus, ChevronDown, ChevronRight, Search } from "lucide-react"
 import Link from "next/link"
 
 interface InventoryItem {
@@ -49,10 +49,19 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
   const [isLoading, setIsLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState("")
+  const [itemSearch, setItemSearch] = useState("")
+
+  // Artikel nach Suchbegriff filtern (Name oder Beschreibung)
+  const search = itemSearch.trim().toLowerCase()
+  const visibleItems = search
+    ? availableItems.filter((i) =>
+        i.name.toLowerCase().includes(search) || (i.description ?? "").toLowerCase().includes(search)
+      )
+    : availableItems
 
   // Group items by category
   const categoryMap = new Map<string, InventoryItem[]>()
-  for (const item of availableItems) {
+  for (const item of visibleItems) {
     const cat = extractCategory(item.description)
     if (!categoryMap.has(cat)) categoryMap.set(cat, [])
     categoryMap.get(cat)!.push(item)
@@ -62,10 +71,12 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
     ...[...categoryMap.entries()].filter(([c]) => !CATEGORY_ORDER.includes(c)).map(([c, items]) => ({ category: c, items })),
   ]
 
-  const [openCats, setOpenCats] = useState<Record<string, boolean>>(
-    Object.fromEntries(grouped.map((g) => [g.category, true]))
-  )
+  // Kategorien standardmäßig zugeklappt
+  const [openCats, setOpenCats] = useState<Record<string, boolean>>({})
   const toggleCat = (cat: string) => setOpenCats((prev) => ({ ...prev, [cat]: !prev[cat] }))
+
+  // Beim Suchen: Kategorien mit Treffern automatisch aufklappen
+  const catOpen = (cat: string) => (search ? true : !!openCats[cat])
 
   const selectedIds = Object.keys(selectedItems).map(Number)
 
@@ -135,9 +146,9 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
         <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
         <h3 className="text-xl font-bold text-gray-900 mb-2">Anfrage erfolgreich gesendet!</h3>
         <p className="text-gray-600 mb-6">
-          Deine Anfrage ist bei uns angekommen. Sie ist noch <strong>nicht verbindlich</strong> –
-          ein Mitglied der FFW Raubling prüft sie und meldet sich per E-Mail.
-          Nach der Bestätigung erhältst du deinen festen <strong>Ansprechpartner</strong>
+          Deine Anfrage ist bei uns angekommen – noch <strong>nicht verbindlich</strong>.
+          Ein Mitglied der FFW Raubling prüft sie und meldet sich per E-Mail.
+          Nach der Bestätigung bekommst du deinen festen <strong>Ansprechpartner</strong>
           mit allen Infos zur Abholung; ab dann läuft alles direkt über ihn.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -156,6 +167,22 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
 
       <div className="space-y-2">
         <Label>Welche Artikel? *</Label>
+
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            type="text"
+            value={itemSearch}
+            onChange={(e) => setItemSearch(e.target.value)}
+            placeholder="Artikel suchen…"
+            className="pl-9"
+          />
+        </div>
+
+        {selectedIds.length > 0 && (
+          <p className="text-xs text-gray-500">{selectedIds.length} Artikel ausgewählt</p>
+        )}
+
         <div className="space-y-2">
           {grouped.map(({ category, items }) => (
             <div key={category} className="rounded-xl border border-gray-200 overflow-hidden">
@@ -166,18 +193,19 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
               >
                 <span className="font-semibold text-sm text-gray-700">
                   {category}
+                  <span className="ml-2 text-xs font-normal text-gray-400">{items.length}</span>
                   {items.some((i) => i.id in selectedItems) && (
                     <span className="ml-2 text-xs bg-red-600 text-white rounded-full px-1.5 py-0.5">
                       {items.filter((i) => i.id in selectedItems).length}
                     </span>
                   )}
                 </span>
-                {openCats[category]
+                {catOpen(category)
                   ? <ChevronDown className="h-4 w-4 text-gray-400 shrink-0" />
                   : <ChevronRight className="h-4 w-4 text-gray-400 shrink-0" />}
               </button>
 
-              {openCats[category] && (
+              {catOpen(category) && (
                 <div className="divide-y divide-gray-100">
                   {items.map((item) => {
                     const selected = item.id in selectedItems
@@ -223,6 +251,11 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
               )}
             </div>
           ))}
+          {grouped.length === 0 && (
+            <p className="text-sm text-gray-500 text-center py-4">
+              Keine Artikel gefunden für „{itemSearch}".
+            </p>
+          )}
         </div>
       </div>
 

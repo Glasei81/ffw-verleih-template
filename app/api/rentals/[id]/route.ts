@@ -71,13 +71,13 @@ export async function PATCH(
         const contactBlock = contactName
           ? `
               <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin:16px 0;">
-                <strong>Ihr Ansprechpartner:</strong><br>
+                <strong>Dein Ansprechpartner:</strong><br>
                 ${contactName}<br>
                 ${contactPhone ? `Telefon: ${contactPhone}<br>` : ""}
                 ${contactEmail ? `E-Mail: ${contactEmail}<br>` : ""}
-                <span style="color:#6b7280;font-size:13px;">Bitte wickeln Sie diese Ausleihe ab jetzt direkt mit Ihrem Ansprechpartner ab – Sie können auch einfach auf diese E-Mail antworten.</span>
+                <span style="color:#6b7280;font-size:13px;">Bitte wickle diese Ausleihe ab jetzt direkt mit deinem Ansprechpartner ab – du kannst auch einfach auf diese E-Mail antworten.</span>
               </div>`
-          : `<p>Bei Fragen antworten Sie einfach auf diese E-Mail – Sie erreichen damit direkt Ihren Ansprechpartner bei der FFW Raubling.</p>`
+          : `<p>Bei Fragen antworte einfach auf diese E-Mail – damit erreichst du direkt deinen Ansprechpartner bei der FFW Raubling.</p>`
 
         // Get all item names for this group
         const gk = requestGroup ?? rental.request_group
@@ -103,12 +103,12 @@ export async function PATCH(
             from: MAIL_FROM,
             to: rental.renter_email,
             replyTo,
-            subject: `Ihre Ausleihanfrage wurde bestätigt – ${itemNamesStr}`,
+            subject: `Deine Ausleihanfrage wurde bestätigt – ${itemNamesStr}`,
             html: `
               <div style="font-family: sans-serif; max-width: 500px;">
                 <h2 style="color: #16a34a;">Ausleihe bestätigt – FFW Raubling</h2>
-                <p>Guten Tag ${rental.renter_name},</p>
-                <p>Ihre Anfrage für <strong>${itemNamesStr}</strong> (${startDate}–${endDate}) wurde bestätigt.</p>
+                <p>Hallo ${rental.renter_name},</p>
+                <p>Deine Anfrage für <strong>${itemNamesStr}</strong> (${startDate}–${endDate}) wurde bestätigt.</p>
                 ${pickupInfo ? `
                 <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin:16px 0;">
                   <strong>Abholhinweis:</strong><br>${pickupInfo}
@@ -123,14 +123,14 @@ export async function PATCH(
             from: MAIL_FROM,
             to: rental.renter_email,
             replyTo,
-            subject: `Ihre Ausleihanfrage – ${itemNamesStr}`,
+            subject: `Deine Ausleihanfrage – ${itemNamesStr}`,
             html: `
               <div style="font-family: sans-serif; max-width: 500px;">
                 <h2 style="color: #dc2626;">Anfrage konnte nicht bestätigt werden – FFW Raubling</h2>
-                <p>Guten Tag ${rental.renter_name},</p>
-                <p>Leider können wir Ihre Anfrage für <strong>${itemNamesStr}</strong> (${startDate}–${endDate}) nicht bestätigen.</p>
+                <p>Hallo ${rental.renter_name},</p>
+                <p>Leider können wir deine Anfrage für <strong>${itemNamesStr}</strong> (${startDate}–${endDate}) nicht bestätigen.</p>
                 ${adminMessage ? `<p><strong>Hinweis:</strong> ${adminMessage}</p>` : ""}
-                <p>Für Rückfragen wenden Sie sich bitte an die Freiwillige Feuerwehr Raubling.</p>
+                <p>Für Rückfragen wende dich bitte an die Freiwillige Feuerwehr Raubling.</p>
               </div>
             `,
           })
