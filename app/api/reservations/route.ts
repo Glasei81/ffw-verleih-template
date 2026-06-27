@@ -98,6 +98,7 @@ export async function POST(request: NextRequest) {
           await resend.emails.send({
             from: MAIL_FROM,
             to: adminEmails,
+            replyTo: renterEmail || undefined,
             subject: `Neue Ausleihanfrage von ${renterName}`,
             html: `
               <div style="font-family: sans-serif; max-width: 500px;">

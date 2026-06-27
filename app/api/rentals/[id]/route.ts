@@ -58,6 +58,11 @@ export async function PATCH(
       try {
         const resend = new Resend(process.env.RESEND_API_KEY)
 
+        // Antworten der Ausleiher sollen an die Admins gehen
+        const adminRows = await sql`SELECT email FROM admins WHERE email IS NOT NULL AND email != ''`
+        const adminEmails = adminRows.map((r) => r.email as string)
+        const replyTo = adminEmails.length > 0 ? adminEmails : undefined
+
         // Get all item names for this group
         const gk = requestGroup ?? rental.request_group
         let itemNamesStr: string
@@ -81,6 +86,7 @@ export async function PATCH(
           await resend.emails.send({
             from: MAIL_FROM,
             to: rental.renter_email,
+            replyTo,
             subject: `Ihre Ausleihanfrage wurde bestätigt – ${itemNamesStr}`,
             html: `
               <div style="font-family: sans-serif; max-width: 500px;">
@@ -100,6 +106,7 @@ export async function PATCH(
           await resend.emails.send({
             from: MAIL_FROM,
             to: rental.renter_email,
+            replyTo,
             subject: `Ihre Ausleihanfrage – ${itemNamesStr}`,
             html: `
               <div style="font-family: sans-serif; max-width: 500px;">
