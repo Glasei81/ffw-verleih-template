@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { ensureRentalsSchema, updateRentalGroupStatus, updateRentalStatus, getAdminContact, sql } from "@/lib/db"
 import { getSession } from "@/lib/auth"
-import { MAIL_FROM } from "@/lib/mail"
+import { MAIL_FROM, toWhatsAppNumber } from "@/lib/mail"
 import { Resend } from "resend"
 
 export async function PATCH(
@@ -68,13 +68,21 @@ export async function PATCH(
         const contactName = (contact?.display_name as string) || (contact?.username as string) || ""
         const contactEmail = (contact?.email as string) || ""
         const contactPhone = (contact?.phone as string) || ""
+        const waNumber = toWhatsAppNumber(contactPhone)
+        const phoneLine = contactPhone
+          ? `Telefon: <a href="tel:${contactPhone.replace(/\s/g, "")}" style="color:#dc2626;text-decoration:none;">${contactPhone}</a>` +
+            (waNumber
+              ? ` &nbsp;·&nbsp; <a href="https://wa.me/${waNumber}" style="color:#16a34a;text-decoration:none;font-weight:bold;">WhatsApp</a>`
+              : "") +
+            "<br>"
+          : ""
         const contactBlock = contactName
           ? `
               <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin:16px 0;">
                 <strong>Dein Ansprechpartner:</strong><br>
                 ${contactName}<br>
-                ${contactPhone ? `Telefon: ${contactPhone}<br>` : ""}
-                ${contactEmail ? `E-Mail: ${contactEmail}<br>` : ""}
+                ${phoneLine}
+                ${contactEmail ? `E-Mail: <a href="mailto:${contactEmail}" style="color:#dc2626;text-decoration:none;">${contactEmail}</a><br>` : ""}
                 <span style="color:#6b7280;font-size:13px;">Bitte wickle diese Ausleihe ab jetzt direkt mit deinem Ansprechpartner ab – du kannst auch einfach auf diese E-Mail antworten.</span>
               </div>`
           : `<p>Bei Fragen antworte einfach auf diese E-Mail – damit erreichst du direkt deinen Ansprechpartner bei der FFW Raubling.</p>`
