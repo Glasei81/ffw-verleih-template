@@ -1,19 +1,28 @@
 /**
- * Erzeugt eine iCalendar-Datei (.ics) für eine Ausleihe.
+ * Erzeugt eine iCalendar-Datei (.ics) für eine Ausleihe/Abholung.
  * Wird vom iPhone-Kalender, Google Kalender, Outlook usw. verstanden.
  *
- * Die Ausleihe ist ein ganztägiger Termin von start_date bis end_date
- * (inklusive). Bei ganztägigen Terminen ist das Enddatum im iCal-Standard
- * exklusiv, daher wird end_date + 1 Tag verwendet.
+ * Zwei Modi:
+ *  - allDay: ganztägiger Termin (Enddatum exklusiv, also letzter Tag + 1)
+ *  - mit Uhrzeit: konkreter Termin (lokale Zeit, ohne Zeitzonen-Block –
+ *    für den lokalen Gebrauch in einer Region völlig ausreichend)
  */
 
 function pad(n: number) {
   return String(n).padStart(2, "0")
 }
 
-/** Datum -> YYYYMMDD (für ganztägige Termine, VALUE=DATE) */
+/** Datum -> YYYYMMDD (ganztägig, VALUE=DATE) */
 function toIcsDate(date: Date) {
   return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}`
+}
+
+/** Datum+Zeit -> YYYYMMDDTHHMMSS (lokale "schwebende" Zeit) */
+function toIcsLocal(date: Date) {
+  return (
+    `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}` +
+    `T${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`
+  )
 }
 
 /** Zeitstempel -> YYYYMMDDTHHMMSSZ (UTC, für DTSTAMP) */
@@ -38,13 +47,22 @@ export interface IcsEvent {
   summary: string
   description?: string
   location?: string
-  start: Date // Startdatum (ganztägig)
-  endExclusive: Date // Enddatum exklusiv (letzter Tag + 1)
+  start: Date // Beginn
+  end: Date // ganztägig: Enddatum exklusiv · mit Uhrzeit: Endzeitpunkt
+  allDay?: boolean // Standard: true (ganztägig)
   stamp?: Date
 }
 
 export function buildICS(event: IcsEvent): string {
+  const allDay = event.allDay ?? true
   const stamp = event.stamp ?? event.start
+  const startLine = allDay
+    ? `DTSTART;VALUE=DATE:${toIcsDate(event.start)}`
+    : `DTSTART:${toIcsLocal(event.start)}`
+  const endLine = allDay
+    ? `DTEND;VALUE=DATE:${toIcsDate(event.end)}`
+    : `DTEND:${toIcsLocal(event.end)}`
+
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
@@ -53,9 +71,10 @@ export function buildICS(event: IcsEvent): string {
     "METHOD:PUBLISH",
     "BEGIN:VEVENT",
     `UID:${event.uid}`,
+    "SEQUENCE:0",
     `DTSTAMP:${toIcsStamp(stamp)}`,
-    `DTSTART;VALUE=DATE:${toIcsDate(event.start)}`,
-    `DTEND;VALUE=DATE:${toIcsDate(event.endExclusive)}`,
+    startLine,
+    endLine,
     `SUMMARY:${escapeIcs(event.summary)}`,
     event.description ? `DESCRIPTION:${escapeIcs(event.description)}` : "",
     event.location ? `LOCATION:${escapeIcs(event.location)}` : "",

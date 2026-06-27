@@ -61,7 +61,8 @@ export async function GET(request: NextRequest) {
     summary: `Verleih: ${itemList} – ${first.renter_name}`,
     description: descParts.join("\n"),
     start,
-    endExclusive,
+    end: endExclusive,
+    allDay: true,
     stamp: new Date(first.start_date as string),
   })
 

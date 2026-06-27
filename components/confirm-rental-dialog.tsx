@@ -3,13 +3,14 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Check, X } from "lucide-react"
 
 interface ConfirmRentalDialogProps {
   isOpen: boolean
   onClose: () => void
-  onConfirm: (pickupInfo: string, adminMessage: string) => void
+  onConfirm: (data: { pickupInfo: string; adminMessage: string; pickupDate: string; pickupTime: string }) => void
   renterName: string
   itemName: string
   startDate: string
@@ -29,15 +30,19 @@ export function ConfirmRentalDialog({
 }: ConfirmRentalDialogProps) {
   const [pickupInfo, setPickupInfo] = useState("")
   const [adminMessage, setAdminMessage] = useState("")
+  // Abholtermin: Datum vorbelegt mit dem Abholdatum aus der Anfrage, Uhrzeit optional
+  const [pickupDate, setPickupDate] = useState(startDate?.slice(0, 10) ?? "")
+  const [pickupTime, setPickupTime] = useState("")
 
   if (!isOpen) return null
 
   const isConfirm = mode === "confirm"
 
   const handleSubmit = () => {
-    onConfirm(pickupInfo, adminMessage)
+    onConfirm({ pickupInfo, adminMessage, pickupDate, pickupTime })
     setPickupInfo("")
     setAdminMessage("")
+    setPickupTime("")
   }
 
   return (
@@ -60,20 +65,47 @@ export function ConfirmRentalDialog({
 
         <div className="space-y-4">
           {isConfirm && (
-            <div className="space-y-1">
-              <Label htmlFor="pickup-info">
-                Abholhinweis <span className="text-red-500">*</span>
-              </Label>
-              <Textarea
-                id="pickup-info"
-                placeholder="z.B. Freitag, 20.06. ab 14 Uhr im Gerätehaus Raubling (Hauptstr. 1)"
-                value={pickupInfo}
-                onChange={(e) => setPickupInfo(e.target.value)}
-                rows={3}
-                autoFocus
-              />
-              <p className="text-xs text-gray-500">Wird per E-Mail an den Ausleiher gesendet</p>
-            </div>
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="pickup-date">Abholung am</Label>
+                  <Input
+                    id="pickup-date"
+                    type="date"
+                    value={pickupDate}
+                    onChange={(e) => setPickupDate(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="pickup-time">
+                    Uhrzeit <span className="text-gray-400 font-normal">(optional)</span>
+                  </Label>
+                  <Input
+                    id="pickup-time"
+                    type="time"
+                    value={pickupTime}
+                    onChange={(e) => setPickupTime(e.target.value)}
+                  />
+                </div>
+              </div>
+              <p className="-mt-2 text-xs text-gray-500">
+                Der Ausleiher bekommt einen Kalender-Termin zum Eintragen. Ohne Uhrzeit gilt der Tag als ganztägig.
+              </p>
+
+              <div className="space-y-1">
+                <Label htmlFor="pickup-info">
+                  Abholhinweis <span className="text-red-500">*</span>
+                </Label>
+                <Textarea
+                  id="pickup-info"
+                  placeholder="z.B. im Gerätehaus Raubling (Hauptstr. 1), bitte klingeln"
+                  value={pickupInfo}
+                  onChange={(e) => setPickupInfo(e.target.value)}
+                  rows={3}
+                />
+                <p className="text-xs text-gray-500">Wird per E-Mail an den Ausleiher gesendet</p>
+              </div>
+            </>
           )}
           <div className="space-y-1">
             <Label htmlFor="admin-message">

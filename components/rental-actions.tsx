@@ -24,7 +24,13 @@ export default function RentalActions({ rental }: RentalActionsProps) {
   const router = useRouter()
   const [dialogMode, setDialogMode] = useState<"confirm" | "cancel" | null>(null)
 
-  const updateStatus = async (newStatus: string, pickupInfo = "", adminMessage = "") => {
+  const updateStatus = async (
+    newStatus: string,
+    pickupInfo = "",
+    adminMessage = "",
+    pickupDate = "",
+    pickupTime = "",
+  ) => {
     try {
       const response = await fetch(`/api/rentals/${rental.id}`, {
         method: "PATCH",
@@ -33,6 +39,8 @@ export default function RentalActions({ rental }: RentalActionsProps) {
           status: newStatus,
           pickupInfo,
           adminMessage,
+          pickupDate,
+          pickupTime,
           requestGroup: rental.group_key,
         }),
       })
@@ -70,8 +78,14 @@ export default function RentalActions({ rental }: RentalActionsProps) {
           <ConfirmRentalDialog
             isOpen={true}
             onClose={() => setDialogMode(null)}
-            onConfirm={(pickupInfo, adminMessage) => {
-              updateStatus(dialogMode === "confirm" ? "confirmed" : "cancelled", pickupInfo, adminMessage)
+            onConfirm={({ pickupInfo, adminMessage, pickupDate, pickupTime }) => {
+              updateStatus(
+                dialogMode === "confirm" ? "confirmed" : "cancelled",
+                pickupInfo,
+                adminMessage,
+                pickupDate,
+                pickupTime,
+              )
               setDialogMode(null)
             }}
             renterName={rental.renter_name}
