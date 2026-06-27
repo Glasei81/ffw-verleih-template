@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createRental, ensureRentalsSchema, getInventoryById, sql } from "@/lib/db"
+import { MAIL_FROM } from "@/lib/mail"
 import { Resend } from "resend"
 import { randomUUID } from "crypto"
 
@@ -95,7 +96,7 @@ export async function POST(request: NextRequest) {
           }
 
           await resend.emails.send({
-            from: "FFW Raubling Verleih <onboarding@resend.dev>",
+            from: MAIL_FROM,
             to: adminEmails,
             subject: `Neue Ausleihanfrage von ${renterName}`,
             html: `

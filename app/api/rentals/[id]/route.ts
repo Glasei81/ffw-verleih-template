@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { ensureRentalsSchema, updateRentalGroupStatus, updateRentalStatus, sql } from "@/lib/db"
 import { getSession } from "@/lib/auth"
+import { MAIL_FROM } from "@/lib/mail"
 import { Resend } from "resend"
 
 export async function PATCH(
@@ -78,7 +79,7 @@ export async function PATCH(
 
         if (status === "confirmed") {
           await resend.emails.send({
-            from: "FFW Raubling Verleih <onboarding@resend.dev>",
+            from: MAIL_FROM,
             to: rental.renter_email,
             subject: `Ihre Ausleihanfrage wurde bestätigt – ${itemNamesStr}`,
             html: `
@@ -97,7 +98,7 @@ export async function PATCH(
           })
         } else {
           await resend.emails.send({
-            from: "FFW Raubling Verleih <onboarding@resend.dev>",
+            from: MAIL_FROM,
             to: rental.renter_email,
             subject: `Ihre Ausleihanfrage – ${itemNamesStr}`,
             html: `
