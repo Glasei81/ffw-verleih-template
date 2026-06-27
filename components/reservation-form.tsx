@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle, Check, AlertTriangle, Minus, Plus, ChevronDown, ChevronRight, Search } from "lucide-react"
 import Link from "next/link"
+import { KAUTION_EUR } from "@/lib/config"
 
 interface InventoryItem {
   id: number
@@ -266,6 +267,14 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
         </div>
       )}
 
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <p className="text-sm text-blue-900">
+          <strong>Kaution: {KAUTION_EUR}€.</strong> Die Kaution wird bei der Abholung hinterlegt
+          und du bekommst sie bei unbeschädigter Rückgabe zurück.
+          Ohne hinterlegte Kaution geben wir die Sachen nicht heraus.
+        </p>
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
           <Label htmlFor="startDate">Abholung *</Label>
@@ -312,8 +321,8 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
       <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex gap-2">
         <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
         <p className="text-xs text-amber-800">
-          <strong>Hinweis:</strong> Schäden oder Verluste am Ausleihgut gehen zu Lasten des Ausleihers
-          und werden auf dessen Rechnung nachgekauft bzw. repariert.
+          <strong>Hinweis:</strong> Geht etwas kaputt oder verloren, kümmern wir uns um Ersatz
+          oder Reparatur – die Kosten dafür trägst du als Ausleiher.
           Die FFW Raubling behält sich vor, Anfragen abzulehnen.
           Nach Bestätigung erhältst du eine E-Mail mit Abholzeit und -ort.
         </p>

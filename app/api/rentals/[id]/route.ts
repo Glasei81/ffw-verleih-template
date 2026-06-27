@@ -3,6 +3,7 @@ import { ensureRentalsSchema, updateRentalGroupStatus, updateRentalStatus, getAd
 import { getSession } from "@/lib/auth"
 import { MAIL_FROM, toWhatsAppNumber, escapeHtml } from "@/lib/mail"
 import { buildICS } from "@/lib/ics"
+import { KAUTION_EUR } from "@/lib/config"
 import { Resend } from "resend"
 
 export async function PATCH(
@@ -169,6 +170,10 @@ export async function PATCH(
                   <strong>Abholhinweis:</strong><br>${pickupInfoHtml}
                 </div>` : ""}
                 ${adminMessageHtml ? `<p><em>${adminMessageHtml}</em></p>` : ""}
+                <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:16px;margin:16px 0;">
+                  <p style="margin:0 0 8px;"><strong>Kaution: ${KAUTION_EUR}€.</strong> Bitte bring die Kaution zur Abholung mit. Ohne hinterlegte Kaution können wir dir die Sachen leider nicht mitgeben. Bei unbeschädigter Rückgabe bekommst du sie zurück.</p>
+                  <p style="margin:0;"><strong>Schäden &amp; Verluste:</strong> Geht etwas kaputt oder fehlt etwas, kümmern wir uns um Ersatz oder Reparatur – die Kosten dafür trägst du als Ausleiher.</p>
+                </div>
                 ${contactBlock}
               </div>
             `,
