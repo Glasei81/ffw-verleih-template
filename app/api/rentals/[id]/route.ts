@@ -94,20 +94,23 @@ export async function PATCH(
           ? contactCard("Bitte wickle diese Ausleihe ab jetzt direkt mit deinem Ansprechpartner ab – du kannst auch einfach auf diese E-Mail antworten.")
           : `<p>Bei Fragen antworte einfach auf diese E-Mail – damit erreichst du direkt deinen Ansprechpartner bei der FFW Raubling.</p>`
 
-        // Get all item names for this group (plain für .ics, escaped fürs HTML)
+        // Get all item names + Gesamtgebühr for this group (plain für .ics, escaped fürs HTML)
         const gk = requestGroup ?? rental.request_group
         let itemNamesPlain: string
+        let totalFee: number
         if (gk) {
           const rows = await sql`
-            SELECT i.name FROM rentals r
+            SELECT i.name, r.total_price FROM rentals r
             JOIN inventory i ON r.item_id = i.id
             WHERE r.request_group = ${gk}::UUID
             ORDER BY r.id
           `
           itemNamesPlain = rows.map((r) => r.name as string).join(", ")
+          totalFee = rows.reduce((sum, r) => sum + Number(r.total_price ?? 0), 0)
         } else {
           const row = await sql`SELECT name FROM inventory WHERE id = ${rental.item_id} LIMIT 1`
           itemNamesPlain = (row[0]?.name as string | undefined) ?? "Artikel"
+          totalFee = Number(rental.total_price ?? 0)
         }
         const itemNamesStr = escapeHtml(itemNamesPlain)
 
@@ -171,7 +174,8 @@ export async function PATCH(
                 </div>` : ""}
                 ${adminMessageHtml ? `<p><em>${adminMessageHtml}</em></p>` : ""}
                 <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:16px;margin:16px 0;">
-                  <p style="margin:0 0 8px;"><strong>Kaution: ${KAUTION_EUR}€.</strong> Bitte bring die Kaution zur Abholung mit. Ohne hinterlegte Kaution können wir dir die Sachen leider nicht mitgeben. Bei unbeschädigter Rückgabe bekommst du sie zurück.</p>
+                  <p style="margin:0 0 8px;"><strong>Gebühr (Pauschale): ${Number(totalFee).toLocaleString("de-DE")}€.</strong> Diesen Betrag zahlst du bei der Abholung.</p>
+                  <p style="margin:0 0 8px;"><strong>Kaution: ${KAUTION_EUR}€.</strong> Bitte bring die Kaution zusätzlich zur Abholung mit. Ohne hinterlegte Kaution können wir dir die Sachen leider nicht mitgeben. Bei unbeschädigter Rückgabe bekommst du sie zurück.</p>
                   <p style="margin:0;"><strong>Schäden &amp; Verluste:</strong> Geht etwas kaputt oder fehlt etwas, kümmern wir uns um Ersatz oder Reparatur – die Kosten dafür trägst du als Ausleiher.</p>
                 </div>
                 ${contactBlock}
