@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { ensureRentalsSchema, updateRentalGroupStatus, updateRentalStatus, getAdminContact, sql } from "@/lib/db"
 import { getSession } from "@/lib/auth"
-import { MAIL_FROM, toWhatsAppNumber } from "@/lib/mail"
+import { MAIL_FROM, toWhatsAppNumber, escapeHtml } from "@/lib/mail"
 import { Resend } from "resend"
 
 export async function PATCH(
@@ -65,10 +65,10 @@ export async function PATCH(
 
         // Ansprechpartner = der Admin, der gerade bestätigt (aus der Session)
         const contact = await getAdminContact(session)
-        const contactName = (contact?.display_name as string) || (contact?.username as string) || ""
-        const contactEmail = (contact?.email as string) || ""
-        const contactPhone = (contact?.phone as string) || ""
-        const waNumber = toWhatsAppNumber(contactPhone)
+        const contactName = escapeHtml((contact?.display_name as string) || (contact?.username as string) || "")
+        const contactEmail = escapeHtml((contact?.email as string) || "")
+        const contactPhone = escapeHtml((contact?.phone as string) || "")
+        const waNumber = toWhatsAppNumber((contact?.phone as string) || "")
         const phoneLine = contactPhone
           ? `Telefon: <a href="tel:${contactPhone.replace(/\s/g, "")}" style="color:#dc2626;text-decoration:none;">${contactPhone}</a>` +
             (waNumber
@@ -97,12 +97,15 @@ export async function PATCH(
             WHERE r.request_group = ${gk}::UUID
             ORDER BY r.id
           `
-          itemNamesStr = rows.map((r) => r.name as string).join(", ")
+          itemNamesStr = rows.map((r) => escapeHtml(r.name as string)).join(", ")
         } else {
           const row = await sql`SELECT name FROM inventory WHERE id = ${rental.item_id} LIMIT 1`
-          itemNamesStr = (row[0]?.name as string | undefined) ?? "Artikel"
+          itemNamesStr = escapeHtml((row[0]?.name as string | undefined) ?? "Artikel")
         }
 
+        const renterName = escapeHtml(rental.renter_name as string)
+        const pickupInfoHtml = escapeHtml(pickupInfo as string | null)
+        const adminMessageHtml = escapeHtml(adminMessage as string | null)
         const startDate = new Date(rental.start_date).toLocaleDateString("de-DE")
         const endDate = new Date(rental.end_date).toLocaleDateString("de-DE")
 
@@ -115,13 +118,13 @@ export async function PATCH(
             html: `
               <div style="font-family: sans-serif; max-width: 500px;">
                 <h2 style="color: #16a34a;">Ausleihe bestätigt – FFW Raubling</h2>
-                <p>Hallo ${rental.renter_name},</p>
+                <p>Hallo ${renterName},</p>
                 <p>Deine Anfrage für <strong>${itemNamesStr}</strong> (${startDate}–${endDate}) wurde bestätigt.</p>
-                ${pickupInfo ? `
+                ${pickupInfoHtml ? `
                 <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin:16px 0;">
-                  <strong>Abholhinweis:</strong><br>${pickupInfo}
+                  <strong>Abholhinweis:</strong><br>${pickupInfoHtml}
                 </div>` : ""}
-                ${adminMessage ? `<p><em>${adminMessage}</em></p>` : ""}
+                ${adminMessageHtml ? `<p><em>${adminMessageHtml}</em></p>` : ""}
                 ${contactBlock}
               </div>
             `,
@@ -135,9 +138,9 @@ export async function PATCH(
             html: `
               <div style="font-family: sans-serif; max-width: 500px;">
                 <h2 style="color: #dc2626;">Anfrage konnte nicht bestätigt werden – FFW Raubling</h2>
-                <p>Hallo ${rental.renter_name},</p>
+                <p>Hallo ${renterName},</p>
                 <p>Leider können wir deine Anfrage für <strong>${itemNamesStr}</strong> (${startDate}–${endDate}) nicht bestätigen.</p>
-                ${adminMessage ? `<p><strong>Hinweis:</strong> ${adminMessage}</p>` : ""}
+                ${adminMessageHtml ? `<p><strong>Hinweis:</strong> ${adminMessageHtml}</p>` : ""}
                 <p>Für Rückfragen wende dich bitte an die Freiwillige Feuerwehr Raubling.</p>
               </div>
             `,

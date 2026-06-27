@@ -11,6 +11,7 @@ export async function ensureRentalsSchema() {
   await sql`ALTER TABLE rentals ADD COLUMN IF NOT EXISTS pickup_info TEXT`
   await sql`ALTER TABLE rentals ADD COLUMN IF NOT EXISTS request_group UUID`
   await sql`ALTER TABLE rentals ADD COLUMN IF NOT EXISTS requester_type VARCHAR(50) DEFAULT 'external'`
+  await sql`ALTER TABLE rentals ADD COLUMN IF NOT EXISTS quantity INTEGER DEFAULT 1`
 }
 
 /** Adds the contact fields (Anzeigename, Telefon) to the admins table. */
@@ -126,7 +127,8 @@ export async function getRentalRequests() {
             'item_id',       r.item_id,
             'item_name',     i.name,
             'price_per_day', i.price_per_day,
-            'total_price',   r.total_price
+            'total_price',   r.total_price,
+            'quantity',      r.quantity
           ) ORDER BY r.id
         ) AS items
       FROM rentals r
@@ -153,20 +155,22 @@ export async function createRental(rental: {
   notes?: string
   request_group?: string | null
   requester_type?: string
+  quantity?: number
 }) {
   const rg = rental.request_group ?? null
   const rt = rental.requester_type ?? "external"
+  const qty = Math.max(1, Number(rental.quantity ?? 1))
   if (rg) {
     return await sql`
       INSERT INTO rentals (
         item_id, renter_name, renter_email, renter_phone,
         start_date, end_date, total_price, notes,
-        request_group, requester_type
+        request_group, requester_type, quantity
       )
       VALUES (
         ${rental.item_id}, ${rental.renter_name}, ${rental.renter_email}, ${rental.renter_phone || null},
         ${rental.start_date}, ${rental.end_date}, ${rental.total_price}, ${rental.notes || null},
-        ${rg}::UUID, ${rt}
+        ${rg}::UUID, ${rt}, ${qty}
       )
       RETURNING *
     `
@@ -174,12 +178,12 @@ export async function createRental(rental: {
   return await sql`
     INSERT INTO rentals (
       item_id, renter_name, renter_email, renter_phone,
-      start_date, end_date, total_price, notes, requester_type
+      start_date, end_date, total_price, notes, requester_type, quantity
     )
     VALUES (
       ${rental.item_id}, ${rental.renter_name}, ${rental.renter_email}, ${rental.renter_phone || null},
       ${rental.start_date}, ${rental.end_date}, ${rental.total_price}, ${rental.notes || null},
-      ${rt}
+      ${rt}, ${qty}
     )
     RETURNING *
   `

@@ -136,7 +136,7 @@ export default async function AdminDashboard() {
                 <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div>
                     <p className="font-medium">{item.name}</p>
-                    <p className="text-sm text-gray-600">{item.price_per_day}€ / Tag</p>
+                    <p className="text-sm text-gray-600">{item.price_per_day}€ Pauschale</p>
                   </div>
                   <span className={`inline-block px-2 py-1 text-xs rounded-full ${
                     item.is_available ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"

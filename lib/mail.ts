@@ -12,6 +12,22 @@ export const MAIL_FROM =
   process.env.RESEND_FROM || "FFW Raubling Verleih <onboarding@resend.dev>"
 
 /**
+ * Macht beliebigen Nutzertext für die Einbettung in E-Mail-HTML sicher,
+ * indem HTML-Sonderzeichen in ihre Entities umgewandelt werden.
+ * So wird z.B. ein im Namensfeld eingegebenes "<b>" als Text angezeigt
+ * und nicht als HTML interpretiert.
+ */
+export function escapeHtml(value: string | null | undefined): string {
+  if (value == null) return ""
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+}
+
+/**
  * Wandelt eine (deutsche) Telefonnummer in das internationale Format
  * für wa.me-/WhatsApp-Links um: nur Ziffern, mit Ländervorwahl, ohne +.
  * Beispiele:

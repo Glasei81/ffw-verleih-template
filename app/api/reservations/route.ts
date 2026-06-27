@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createRental, ensureRentalsSchema, getInventoryById, sql } from "@/lib/db"
-import { MAIL_FROM } from "@/lib/mail"
+import { MAIL_FROM, escapeHtml } from "@/lib/mail"
 import { Resend } from "resend"
 import { randomUUID } from "crypto"
 
@@ -8,6 +8,8 @@ export async function POST(request: NextRequest) {
   try {
     const data = await request.json()
     const { renterName, renterEmail, renterPhone, startDate, endDate, notes, itemIds, requesterType } = data
+    // Gewünschte Stückzahl je Artikel-ID (z.B. { "12": 5 }); fehlt sie, gilt 1
+    const quantities: Record<number, number> = data.quantities || {}
 
     if (!itemIds || !Array.isArray(itemIds) || itemIds.length === 0) {
       return NextResponse.json({ error: "Mindestens einen Artikel auswählen" }, { status: 400 })
@@ -36,27 +38,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Ein oder mehrere Artikel sind nicht verfügbar" }, { status: 400 })
     }
 
-    // Überschneidung mit bestätigten Ausleihen prüfen (Stückzahl berücksichtigen)
+    // Schema sicherstellen (u.a. quantity-Spalte) bevor wir Mengen prüfen
+    await ensureRentalsSchema()
+
+    // Verfügbarkeit prüfen: bereits bestätigte Stückzahl im Zeitraum gegen
+    // den Gesamtbestand und die jetzt gewünschte Menge abgleichen
     for (const item of items) {
+      const requested = Math.max(1, Number(quantities[item!.id] ?? 1))
+      const stock = Number(item!.quantity ?? 1)
       const rows = await sql`
-        SELECT COUNT(*)::int AS count FROM rentals
+        SELECT COALESCE(SUM(quantity), 0)::int AS reserved FROM rentals
         WHERE item_id = ${item!.id}
           AND status = 'confirmed'
           AND start_date <= ${endDate}
           AND end_date >= ${startDate}
       `
-      const overlapping = Number(rows[0]?.count ?? 0)
-      const quantity = Number(item!.quantity ?? 1)
-      if (overlapping >= quantity) {
-        return NextResponse.json(
-          { error: `"${item!.name}" ist im gewählten Zeitraum bereits vergeben. Bitte anderen Zeitraum wählen.` },
-          { status: 400 },
-        )
+      const reserved = Number(rows[0]?.reserved ?? 0)
+      const free = stock - reserved
+      if (requested > free) {
+        const msg = free <= 0
+          ? `"${item!.name}" ist im gewählten Zeitraum bereits komplett vergeben. Bitte anderen Zeitraum wählen.`
+          : `Von "${item!.name}" ${free === 1 ? "ist im gewählten Zeitraum nur noch 1 Stück" : `sind im gewählten Zeitraum nur noch ${free} Stück`} verfügbar (du hast ${requested} angefragt).`
+        return NextResponse.json({ error: msg }, { status: 400 })
       }
     }
-
-    // Ensure new schema columns exist
-    await ensureRentalsSchema()
 
     // All items in this submission share one group id
     const requestGroup = randomUUID()
@@ -71,10 +76,11 @@ export async function POST(request: NextRequest) {
           renter_phone: renterPhone,
           start_date: startDate,
           end_date: endDate,
-          total_price: item!.price_per_day * days,
+          total_price: item!.price_per_day, // Pauschale pro Gegenstand
           notes,
           request_group: requestGroup,
           requester_type: rType,
+          quantity: quantities[item!.id] ?? 1,
         })
       )
     )
@@ -87,31 +93,26 @@ export async function POST(request: NextRequest) {
 
         if (adminEmails.length > 0) {
           const resend = new Resend(process.env.RESEND_API_KEY)
-          const itemList = items.map((i) => `${i!.name} (${i!.price_per_day * days}€)`).join(", ")
-          const totalPrice = items.reduce((sum, i) => sum + i!.price_per_day * days, 0)
-          const requesterLabels: Record<string, string> = {
-            ffw_member: "FFW-Mitglied Raubling",
-            partner: "Anderer Verein / Gemeinde",
-            external: "Privat / Extern",
-          }
+          // Pauschalpreis: einmal pro Gegenstand, unabhängig von Menge und Tagen
+          const itemList = items.map((i) => `${escapeHtml(i!.name)} (${i!.price_per_day}€)`).join(", ")
+          const totalPrice = items.reduce((sum, i) => sum + Number(i!.price_per_day), 0)
 
           await resend.emails.send({
             from: MAIL_FROM,
             to: adminEmails,
             replyTo: renterEmail || undefined,
-            subject: `Neue Ausleihanfrage von ${renterName}`,
+            subject: `Neue Ausleihanfrage von ${escapeHtml(renterName)}`,
             html: `
               <div style="font-family: sans-serif; max-width: 500px;">
                 <h2 style="color: #dc2626;">Neue Ausleihanfrage – FFW Raubling</h2>
                 <table style="width: 100%; border-collapse: collapse;">
                   <tr><td style="padding: 6px 0; color: #666;">Artikel</td><td style="padding: 6px 0; font-weight: bold;">${itemList}</td></tr>
-                  <tr><td style="padding: 6px 0; color: #666;">Von</td><td style="padding: 6px 0;">${renterName}</td></tr>
-                  <tr><td style="padding: 6px 0; color: #666;">Art</td><td style="padding: 6px 0;">${requesterLabels[rType] ?? rType}</td></tr>
-                  <tr><td style="padding: 6px 0; color: #666;">E-Mail</td><td style="padding: 6px 0;">${renterEmail}</td></tr>
-                  <tr><td style="padding: 6px 0; color: #666;">Telefon</td><td style="padding: 6px 0;">${renterPhone || "–"}</td></tr>
+                  <tr><td style="padding: 6px 0; color: #666;">Von</td><td style="padding: 6px 0;">${escapeHtml(renterName)}</td></tr>
+                  <tr><td style="padding: 6px 0; color: #666;">E-Mail</td><td style="padding: 6px 0;">${escapeHtml(renterEmail)}</td></tr>
+                  <tr><td style="padding: 6px 0; color: #666;">Telefon</td><td style="padding: 6px 0;">${escapeHtml(renterPhone) || "–"}</td></tr>
                   <tr><td style="padding: 6px 0; color: #666;">Zeitraum</td><td style="padding: 6px 0;">${startDate} bis ${endDate} (${days} Tag${days !== 1 ? "e" : ""})</td></tr>
-                  <tr><td style="padding: 6px 0; color: #666;">Gesamtpreis</td><td style="padding: 6px 0; font-weight: bold; color: #dc2626;">${totalPrice}€</td></tr>
-                  ${notes ? `<tr><td style="padding: 6px 0; color: #666;">Notizen</td><td style="padding: 6px 0;">${notes}</td></tr>` : ""}
+                  <tr><td style="padding: 6px 0; color: #666;">Gesamtpreis</td><td style="padding: 6px 0; font-weight: bold; color: #dc2626;">${totalPrice}€ Pauschale</td></tr>
+                  ${notes ? `<tr><td style="padding: 6px 0; color: #666;">Notizen</td><td style="padding: 6px 0;">${escapeHtml(notes)}</td></tr>` : ""}
                 </table>
               </div>
             `,

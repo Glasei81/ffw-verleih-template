@@ -125,7 +125,7 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
       const response = await fetch("/api/reservations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formData, notes: combinedNotes, itemIds: selectedIds, requesterType }),
+        body: JSON.stringify({ ...formData, notes: combinedNotes, itemIds: selectedIds, quantities: selectedItems, requesterType }),
       })
       const data = await response.json()
       if (response.ok) {

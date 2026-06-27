@@ -82,8 +82,8 @@ export default async function RentalsPage({
 
       <div className="space-y-4">
         {filtered.map((req) => {
-          const items = req.items as Array<{ item_name: string; total_price: number; price_per_day: number }>
-          const itemNamesStr = items.map((i) => i.item_name).join(", ")
+          const items = req.items as Array<{ item_name: string; total_price: number; price_per_day: number; quantity: number }>
+          const itemNamesStr = items.map((i) => (i.quantity > 1 ? `${i.quantity}× ${i.item_name}` : i.item_name)).join(", ")
           const rType = (req.requester_type as string) || "external"
           const status = req.status as string
 
@@ -140,7 +140,7 @@ export default async function RentalsPage({
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-500">Gesamtbetrag</p>
+                    <p className="text-sm font-medium text-gray-500">Gesamtbetrag <span className="font-normal text-gray-400">(Pauschale)</span></p>
                     <p className="font-bold text-lg text-red-600">
                       {Number(req.total_price).toFixed(2)}€
                     </p>
@@ -148,7 +148,7 @@ export default async function RentalsPage({
                       <ul className="mt-1 space-y-0.5">
                         {items.map((item, i) => (
                           <li key={i} className="text-xs text-gray-500">
-                            {item.item_name}: {Number(item.total_price).toFixed(2)}€
+                            {item.quantity > 1 ? `${item.quantity}× ` : ""}{item.item_name}: {Number(item.total_price).toFixed(2)}€
                           </li>
                         ))}
                       </ul>
