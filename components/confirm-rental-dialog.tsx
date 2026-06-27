@@ -7,6 +7,16 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Check, X } from "lucide-react"
 
+/** Wandelt String oder Date robust in das YYYY-MM-DD-Format für <input type="date"> um. */
+function toDateInputValue(value: string | Date | null | undefined): string {
+  if (!value) return ""
+  if (typeof value === "string") return value.slice(0, 10)
+  const d = new Date(value)
+  if (isNaN(d.getTime())) return ""
+  const pad = (n: number) => String(n).padStart(2, "0")
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
 interface ConfirmRentalDialogProps {
   isOpen: boolean
   onClose: () => void
@@ -31,7 +41,7 @@ export function ConfirmRentalDialog({
   const [pickupInfo, setPickupInfo] = useState("")
   const [adminMessage, setAdminMessage] = useState("")
   // Abholtermin: Datum vorbelegt mit dem Abholdatum aus der Anfrage, Uhrzeit optional
-  const [pickupDate, setPickupDate] = useState(startDate?.slice(0, 10) ?? "")
+  const [pickupDate, setPickupDate] = useState(toDateInputValue(startDate))
   const [pickupTime, setPickupTime] = useState("")
 
   if (!isOpen) return null
