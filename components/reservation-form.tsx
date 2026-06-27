@@ -134,7 +134,12 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
       <div className="text-center py-8">
         <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
         <h3 className="text-xl font-bold text-gray-900 mb-2">Anfrage erfolgreich gesendet!</h3>
-        <p className="text-gray-600 mb-6">Deine Anfrage ist bei uns angekommen. Wir melden uns bald bei dir.</p>
+        <p className="text-gray-600 mb-6">
+          Deine Anfrage ist bei uns angekommen. Sie ist noch <strong>nicht verbindlich</strong> –
+          ein Mitglied der FFW Raubling prüft sie und meldet sich per E-Mail.
+          Nach der Bestätigung erhältst du deinen festen <strong>Ansprechpartner</strong>
+          mit allen Infos zur Abholung; ab dann läuft alles direkt über ihn.
+        </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Button onClick={() => { setSuccess(false); setSelectedItems({}) }} variant="outline">Weitere Anfrage</Button>
           <Link href="/">

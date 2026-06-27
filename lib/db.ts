@@ -13,6 +13,26 @@ export async function ensureRentalsSchema() {
   await sql`ALTER TABLE rentals ADD COLUMN IF NOT EXISTS requester_type VARCHAR(50) DEFAULT 'external'`
 }
 
+/** Adds the contact fields (Anzeigename, Telefon) to the admins table. */
+export async function ensureAdminsSchema() {
+  await sql`ALTER TABLE admins ADD COLUMN IF NOT EXISTS display_name TEXT`
+  await sql`ALTER TABLE admins ADD COLUMN IF NOT EXISTS phone TEXT`
+}
+
+/** Looks up an admin's contact info by username (for "Ansprechpartner"). */
+export async function getAdminContact(username: string) {
+  try {
+    await ensureAdminsSchema()
+    const rows = await sql`
+      SELECT username, display_name, email, phone
+      FROM admins WHERE username = ${username} LIMIT 1
+    `
+    return rows[0] || null
+  } catch {
+    return null
+  }
+}
+
 export async function getInventoryItems() {
   try {
     return await sql`SELECT * FROM inventory ORDER BY name ASC`

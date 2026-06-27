@@ -1,5 +1,6 @@
 "use client"
 
+import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -12,7 +13,9 @@ import { Trash2, ShieldCheck, Pencil, Check, X } from "lucide-react"
 interface Admin {
   id: number
   username: string
+  display_name: string | null
   email: string | null
+  phone: string | null
   created_at: string
 }
 
@@ -27,12 +30,16 @@ export default function AdminsClient({
   const [admins, setAdmins] = useState(initial)
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
+  const [displayName, setDisplayName] = useState("")
   const [email, setEmail] = useState("")
+  const [phone, setPhone] = useState("")
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
+  const [editName, setEditName] = useState("")
   const [editEmail, setEditEmail] = useState("")
+  const [editPhone, setEditPhone] = useState("")
 
   const createAdmin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -43,14 +50,16 @@ export default function AdminsClient({
       const res = await fetch("/api/admin/admins", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password, email }),
+        body: JSON.stringify({ username, password, email, displayName, phone }),
       })
       const data = await res.json()
       if (res.ok) {
         setSuccess(`Admin "${username}" wurde angelegt.`)
         setUsername("")
         setPassword("")
+        setDisplayName("")
         setEmail("")
+        setPhone("")
         router.refresh()
       } else {
         setError(data.error)
@@ -74,14 +83,25 @@ export default function AdminsClient({
     }
   }
 
-  const saveEmail = async (id: number) => {
+  const startEdit = (a: Admin) => {
+    setEditingId(a.id)
+    setEditName(a.display_name ?? "")
+    setEditEmail(a.email ?? "")
+    setEditPhone(a.phone ?? "")
+  }
+
+  const saveEdit = async (id: number) => {
     const res = await fetch("/api/admin/admins", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, email: editEmail }),
+      body: JSON.stringify({ id, email: editEmail, displayName: editName, phone: editPhone }),
     })
     if (res.ok) {
-      setAdmins((prev) => prev.map((a) => a.id === id ? { ...a, email: editEmail || null } : a))
+      setAdmins((prev) => prev.map((a) =>
+        a.id === id
+          ? { ...a, display_name: editName || null, email: editEmail || null, phone: editPhone || null }
+          : a
+      ))
       setEditingId(null)
     }
   }
@@ -91,6 +111,9 @@ export default function AdminsClient({
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Aktive Administratoren</CardTitle>
+          <p className="text-xs text-gray-500">
+            Name und Telefon erscheinen als Ansprechpartner in der Bestätigungs-E-Mail an den Ausleiher.
+          </p>
         </CardHeader>
         <CardContent className="space-y-2">
           <div className="flex items-center justify-between p-2 rounded bg-gray-50">
@@ -101,50 +124,57 @@ export default function AdminsClient({
             <span className="text-xs text-gray-400">Hauptkonto</span>
           </div>
           {admins.map((a) => (
-            <div key={a.id} className="p-2 rounded bg-gray-50">
+            <div key={a.id} className="p-3 rounded bg-gray-50">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="h-4 w-4 text-blue-500" />
-                  <span className="text-sm font-medium">{a.username}</span>
+                  <span className="text-sm font-medium">
+                    {a.display_name || a.username}
+                    {a.display_name && <span className="text-gray-400 font-normal"> ({a.username})</span>}
+                  </span>
                 </div>
-                {a.username !== currentUser && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => deleteAdmin(a.id, a.username)}
-                    className="text-red-500 hover:text-red-700 h-7 px-2"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                )}
-              </div>
-              <div className="mt-1 ml-6">
-                {editingId === a.id ? (
-                  <div className="flex items-center gap-1">
-                    <Input
-                      type="email"
-                      value={editEmail}
-                      onChange={(e) => setEditEmail(e.target.value)}
-                      placeholder="E-Mail-Adresse"
-                      className="h-7 text-xs"
-                    />
-                    <Button variant="ghost" size="sm" className="h-7 px-1 text-green-600" onClick={() => saveEmail(a.id)}>
-                      <Check className="h-3.5 w-3.5" />
+                <div className="flex items-center gap-1">
+                  {editingId !== a.id && (
+                    <Button variant="ghost" size="sm" className="h-7 px-2 text-gray-500" onClick={() => startEdit(a)}>
+                      <Pencil className="h-3.5 w-3.5" />
                     </Button>
-                    <Button variant="ghost" size="sm" className="h-7 px-1 text-gray-400" onClick={() => setEditingId(null)}>
+                  )}
+                  {a.username !== currentUser && editingId !== a.id && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => deleteAdmin(a.id, a.username)}
+                      className="text-red-500 hover:text-red-700 h-7 px-2"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {editingId === a.id ? (
+                <div className="mt-2 space-y-2">
+                  <Input value={editName} onChange={(e) => setEditName(e.target.value)}
+                    placeholder="Name (z.B. Max Mustermann)" className="h-8 text-sm" />
+                  <Input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)}
+                    placeholder="E-Mail-Adresse" className="h-8 text-sm" />
+                  <Input type="tel" value={editPhone} onChange={(e) => setEditPhone(e.target.value)}
+                    placeholder="Telefon (optional)" className="h-8 text-sm" />
+                  <div className="flex gap-1">
+                    <Button size="sm" className="h-8 bg-green-600 hover:bg-green-700" onClick={() => saveEdit(a.id)}>
+                      <Check className="h-3.5 w-3.5 mr-1" /> Speichern
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-8 text-gray-400" onClick={() => setEditingId(null)}>
                       <X className="h-3.5 w-3.5" />
                     </Button>
                   </div>
-                ) : (
-                  <button
-                    className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600"
-                    onClick={() => { setEditingId(a.id); setEditEmail(a.email ?? "") }}
-                  >
-                    <Pencil className="h-3 w-3" />
-                    {a.email ? a.email : "E-Mail eintragen"}
-                  </button>
-                )}
-              </div>
+                </div>
+              ) : (
+                <div className="mt-1 ml-6 text-xs text-gray-500 space-y-0.5">
+                  <p>{a.email || <span className="text-gray-400">keine E-Mail</span>}</p>
+                  {a.phone && <p>{a.phone}</p>}
+                </div>
+              )}
             </div>
           ))}
         </CardContent>
@@ -169,9 +199,19 @@ export default function AdminsClient({
                 placeholder="Sicheres Passwort" required />
             </div>
             <div className="space-y-2">
-              <Label>E-Mail <span className="text-gray-400 font-normal">(optional, für Benachrichtigungen)</span></Label>
+              <Label>Name <span className="text-gray-400 font-normal">(als Ansprechpartner sichtbar)</span></Label>
+              <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="z.B. Max Mustermann" />
+            </div>
+            <div className="space-y-2">
+              <Label>E-Mail <span className="text-gray-400 font-normal">(für Benachrichtigungen)</span></Label>
               <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@ffw-raubling.de" />
+                placeholder="admin@feuerwehr-raubling.de" />
+            </div>
+            <div className="space-y-2">
+              <Label>Telefon <span className="text-gray-400 font-normal">(optional)</span></Label>
+              <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
+                placeholder="z.B. 0170 1234567" />
             </div>
             <Button type="submit" className="w-full bg-red-600 hover:bg-red-700" disabled={isLoading}>
               {isLoading ? "Wird angelegt..." : "Admin anlegen"}

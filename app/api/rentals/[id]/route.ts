@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { ensureRentalsSchema, updateRentalGroupStatus, updateRentalStatus, sql } from "@/lib/db"
+import { ensureRentalsSchema, updateRentalGroupStatus, updateRentalStatus, getAdminContact, sql } from "@/lib/db"
 import { getSession } from "@/lib/auth"
 import { MAIL_FROM } from "@/lib/mail"
 import { Resend } from "resend"
@@ -63,6 +63,22 @@ export async function PATCH(
         const adminEmails = adminRows.map((r) => r.email as string)
         const replyTo = adminEmails.length > 0 ? adminEmails : undefined
 
+        // Ansprechpartner = der Admin, der gerade bestätigt (aus der Session)
+        const contact = await getAdminContact(session)
+        const contactName = (contact?.display_name as string) || (contact?.username as string) || ""
+        const contactEmail = (contact?.email as string) || ""
+        const contactPhone = (contact?.phone as string) || ""
+        const contactBlock = contactName
+          ? `
+              <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin:16px 0;">
+                <strong>Ihr Ansprechpartner:</strong><br>
+                ${contactName}<br>
+                ${contactPhone ? `Telefon: ${contactPhone}<br>` : ""}
+                ${contactEmail ? `E-Mail: ${contactEmail}<br>` : ""}
+                <span style="color:#6b7280;font-size:13px;">Bitte wickeln Sie diese Ausleihe ab jetzt direkt mit Ihrem Ansprechpartner ab – Sie können auch einfach auf diese E-Mail antworten.</span>
+              </div>`
+          : `<p>Bei Fragen antworten Sie einfach auf diese E-Mail – Sie erreichen damit direkt Ihren Ansprechpartner bei der FFW Raubling.</p>`
+
         // Get all item names for this group
         const gk = requestGroup ?? rental.request_group
         let itemNamesStr: string
@@ -98,7 +114,7 @@ export async function PATCH(
                   <strong>Abholhinweis:</strong><br>${pickupInfo}
                 </div>` : ""}
                 ${adminMessage ? `<p><em>${adminMessage}</em></p>` : ""}
-                <p>Bei Fragen wenden Sie sich bitte an die Freiwillige Feuerwehr Raubling.</p>
+                ${contactBlock}
               </div>
             `,
           })

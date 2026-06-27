@@ -1,14 +1,15 @@
 import { getSession } from "@/lib/auth"
-import { sql } from "@/lib/db"
+import { sql, ensureAdminsSchema } from "@/lib/db"
 import AdminsClient from "@/components/admins-client"
 
 export const dynamic = "force-dynamic"
 
 export default async function AdminsPage() {
   const currentUser = await getSession()
-  let admins: { id: number; username: string; created_at: string }[] = []
+  let admins: { id: number; username: string; display_name: string | null; email: string | null; phone: string | null; created_at: string }[] = []
   try {
-    admins = await sql`SELECT id, username, created_at FROM admins ORDER BY created_at ASC` as typeof admins
+    await ensureAdminsSchema()
+    admins = await sql`SELECT id, username, display_name, email, phone, created_at FROM admins ORDER BY created_at ASC` as typeof admins
   } catch {
     // Tabelle existiert noch nicht
   }
