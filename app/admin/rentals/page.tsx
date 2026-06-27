@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getRentalRequests } from "@/lib/db"
 import RentalActions from "@/components/rental-actions"
 import RentalFilters from "@/components/rental-filters"
+import { CalendarPlus } from "lucide-react"
 
 export const dynamic = "force-dynamic"
 
@@ -138,6 +139,15 @@ export default async function RentalsPage({
                       {new Date(req.start_date as string).toLocaleDateString("de-DE")} –{" "}
                       {new Date(req.end_date as string).toLocaleDateString("de-DE")}
                     </p>
+                    {(status === "confirmed" || status === "pending") && (
+                      <a
+                        href={`/api/rentals/ics?group=${req.group_key as string}`}
+                        className="inline-flex items-center gap-1 mt-1 text-xs text-red-600 hover:underline"
+                      >
+                        <CalendarPlus className="h-3.5 w-3.5" />
+                        Zum Kalender hinzufügen
+                      </a>
+                    )}
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-500">Gesamtbetrag <span className="font-normal text-gray-400">(Pauschale)</span></p>
