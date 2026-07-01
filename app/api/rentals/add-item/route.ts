@@ -46,6 +46,24 @@ export async function POST(request: NextRequest) {
 
     const qty = Math.max(1, Number(quantity ?? 1))
 
+    // Verfügbarkeit prüfen: bereits bestätigte Stückzahl im Zeitraum gegen Bestand
+    const stock = Number(item.quantity ?? 1)
+    const reservedRows = await sql`
+      SELECT COALESCE(SUM(quantity), 0)::int AS reserved FROM rentals
+      WHERE item_id = ${item.id}
+        AND status = 'confirmed'
+        AND start_date <= ${anchor.end_date}
+        AND end_date >= ${anchor.start_date}
+    `
+    const reserved = Number(reservedRows[0]?.reserved ?? 0)
+    const free = stock - reserved
+    if (qty > free) {
+      const msg = free <= 0
+        ? `"${item.name}" ist im Zeitraum dieser Anfrage bereits komplett vergeben – kann nicht hinzugefügt werden.`
+        : `Von "${item.name}" ${free === 1 ? "ist nur noch 1 Stück" : `sind nur noch ${free} Stück`} im Zeitraum frei (du wolltest ${qty} hinzufügen).`
+      return NextResponse.json({ error: msg }, { status: 409 })
+    }
+
     await sql`
       INSERT INTO rentals (
         item_id, renter_name, renter_email, renter_phone,

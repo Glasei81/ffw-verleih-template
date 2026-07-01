@@ -3,6 +3,7 @@ import { getRentalRequests, getInventoryItems } from "@/lib/db"
 import RentalActions from "@/components/rental-actions"
 import RentalFilters from "@/components/rental-filters"
 import AddRentalItem from "@/components/add-rental-item"
+import EditRentalItems from "@/components/edit-rental-items"
 import { CalendarPlus } from "lucide-react"
 
 export const dynamic = "force-dynamic"
@@ -87,7 +88,7 @@ export default async function RentalsPage({
 
       <div className="space-y-4">
         {filtered.map((req) => {
-          const items = req.items as Array<{ item_name: string; total_price: number; price_per_day: number; quantity: number }>
+          const items = req.items as Array<{ id: number; item_name: string; total_price: number; price_per_day: number; quantity: number }>
           const itemNamesStr = items.map((i) => (i.quantity > 1 ? `${i.quantity}× ${i.item_name}` : i.item_name)).join(", ")
           const rType = (req.requester_type as string) || "external"
           const status = req.status as string
@@ -158,14 +159,25 @@ export default async function RentalsPage({
                     <p className="font-bold text-lg text-red-600">
                       {Number(req.total_price).toFixed(2)}€
                     </p>
-                    {items.length > 1 && (
-                      <ul className="mt-1 space-y-0.5">
-                        {items.map((item, i) => (
-                          <li key={i} className="text-xs text-gray-500">
-                            {item.quantity > 1 ? `${item.quantity}× ` : ""}{item.item_name}: {Number(item.total_price).toFixed(2)}€
-                          </li>
-                        ))}
-                      </ul>
+                    {status === "confirmed" || status === "pending" ? (
+                      <EditRentalItems
+                        items={items.map((it) => ({
+                          id: it.id,
+                          item_name: it.item_name,
+                          quantity: it.quantity,
+                          total_price: it.total_price,
+                        }))}
+                      />
+                    ) : (
+                      items.length > 1 && (
+                        <ul className="mt-1 space-y-0.5">
+                          {items.map((item, i) => (
+                            <li key={i} className="text-xs text-gray-500">
+                              {item.quantity > 1 ? `${item.quantity}× ` : ""}{item.item_name}: {Number(item.total_price).toFixed(2)}€
+                            </li>
+                          ))}
+                        </ul>
+                      )
                     )}
                   </div>
                 </div>
