@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
                   <tr><td style="padding: 6px 0; color: #666;">Telefon</td><td style="padding: 6px 0;">${escapeHtml(renterPhone) || "–"}</td></tr>
                   <tr><td style="padding: 6px 0; color: #666;">Zeitraum</td><td style="padding: 6px 0;">${startDate} bis ${endDate} (${days} Tag${days !== 1 ? "e" : ""})</td></tr>
                   <tr><td style="padding: 6px 0; color: #666;">Gesamtpreis</td><td style="padding: 6px 0; font-weight: bold; color: #dc2626;">${totalPrice}€ Pauschale</td></tr>
-                  ${notes ? `<tr><td style="padding: 6px 0; color: #666;">Notizen</td><td style="padding: 6px 0;">${escapeHtml(notes)}</td></tr>` : ""}
+                  ${notes ? `<tr><td style="padding: 6px 0; color: #666;">Notizen</td><td style="padding: 6px 0;"><strong><u>${escapeHtml(notes)}</u></strong></td></tr>` : ""}
                 </table>
               </div>
             `,

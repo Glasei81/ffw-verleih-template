@@ -1,7 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { getRentalRequests } from "@/lib/db"
+import { getRentalRequests, getInventoryItems } from "@/lib/db"
 import RentalActions from "@/components/rental-actions"
 import RentalFilters from "@/components/rental-filters"
+import AddRentalItem from "@/components/add-rental-item"
 import { CalendarPlus } from "lucide-react"
 
 export const dynamic = "force-dynamic"
@@ -49,7 +50,10 @@ export default async function RentalsPage({
   searchParams: Promise<{ search?: string; tab?: string }>
 }) {
   const { search, tab } = await searchParams
-  const allRequests = await getRentalRequests()
+  const [allRequests, inventory] = await Promise.all([getRentalRequests(), getInventoryItems()])
+  const inventoryOptions = inventory
+    .filter((i) => i.is_available)
+    .map((i) => ({ id: i.id as number, name: i.name as string }))
 
   const isArchive = tab === "archiv"
   const tabStatuses = isArchive ? ARCHIVE_STATUSES : ACTIVE_STATUSES
@@ -166,10 +170,14 @@ export default async function RentalsPage({
                   </div>
                 </div>
 
+                {(status === "confirmed" || status === "pending") && (
+                  <AddRentalItem requestGroup={req.group_key as string} items={inventoryOptions} />
+                )}
+
                 {req.notes && (
-                  <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                    <p className="text-xs font-medium text-gray-500 mb-1">Notiz</p>
-                    <p className="text-sm text-gray-600">{req.notes as string}</p>
+                  <div className="mt-4 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                    <p className="text-xs font-medium text-amber-700 mb-1">Notiz</p>
+                    <p className="text-sm font-bold underline text-amber-900">{req.notes as string}</p>
                   </div>
                 )}
                 {req.pickup_info && (
