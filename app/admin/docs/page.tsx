@@ -37,7 +37,7 @@ export default async function DocsPage() {
               <li>Verfügbarkeitsprüfung und Kaution-Hinweise</li>
             </ul>
             <div className="pt-4 space-y-2">
-              <a href="/api/docs/pdf?type=admin" className="inline-block w-full">
+              <a href="/ANLEITUNG-ADMIN.pdf" download className="inline-block w-full">
                 <Button className="w-full gap-2 bg-blue-600 hover:bg-blue-700">
                   <Download className="h-4 w-4" />
                   Als PDF herunterladen
@@ -75,7 +75,7 @@ export default async function DocsPage() {
               <li>Rückgabe und FAQ</li>
             </ul>
             <div className="pt-4 space-y-2">
-              <a href="/api/docs/pdf?type=enduser" className="inline-block w-full">
+              <a href="/ANLEITUNG-ENDBENUTZER.pdf" download className="inline-block w-full">
                 <Button className="w-full gap-2 bg-green-600 hover:bg-green-700">
                   <Download className="h-4 w-4" />
                   Als PDF herunterladen

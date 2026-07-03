@@ -21,7 +21,7 @@ export default async function EnduserDocsPage() {
               Zurück
             </Button>
           </Link>
-          <a href="/api/docs/pdf?type=enduser">
+          <a href="/ANLEITUNG-ENDBENUTZER.pdf" download>
             <Button size="sm" className="gap-2 bg-green-600 hover:bg-green-700">
               <Download className="h-4 w-4" />
               Als PDF herunterladen
@@ -56,7 +56,7 @@ export default async function EnduserDocsPage() {
       <div className="bg-gray-50 border-t mt-12">
         <div className="max-w-4xl mx-auto px-4 py-6 flex items-center justify-between text-sm text-gray-600">
           <div>FFW Raubling – Geräteverleih</div>
-          <a href="/api/docs/pdf?type=enduser">
+          <a href="/ANLEITUNG-ENDBENUTZER.pdf" download>
             <Button size="sm" variant="outline" className="gap-2">
               <Download className="h-4 w-4" />
               PDF herunterladen
