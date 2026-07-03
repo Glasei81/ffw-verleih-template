@@ -35,6 +35,9 @@ export default function AdminHeader() {
             <Link href="/admin/rentals" className="text-sm text-gray-600 hover:text-red-600 font-medium whitespace-nowrap">
               Ausleihen
             </Link>
+            <Link href="/admin/docs" className="text-sm text-gray-600 hover:text-red-600 font-medium whitespace-nowrap">
+              Dokumentation
+            </Link>
             <Link href="/admin/admins" className="text-sm text-gray-600 hover:text-red-600 font-medium whitespace-nowrap">
               Admins
             </Link>

@@ -149,6 +149,21 @@ export default async function AdminDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="bg-blue-50 border-blue-200">
+        <CardHeader>
+          <CardTitle>Bedienungsanleitungen & Ressourcen</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-gray-700 mb-4">
+            Ausführliche Anleitungen für Administratoren und Endbenutzer stehen zur Verfügung.
+            Laden Sie diese herunter oder lesen Sie sie im Browser.
+          </p>
+          <Link href="/admin/docs" className="inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium">
+            Zu den Dokumenten
+          </Link>
+        </CardContent>
+      </Card>
     </div>
   )
 }

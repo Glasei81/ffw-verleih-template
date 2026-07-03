@@ -45,8 +45,11 @@ export default async function HomePage() {
       </main>
 
       <footer className="bg-white border-t mt-12">
-        <div className="container mx-auto px-4 py-4">
-          <p className="text-center text-gray-400 text-sm">Freiwillige Feuerwehr Raubling</p>
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <p className="text-gray-400 text-sm">Freiwillige Feuerwehr Raubling</p>
+          <Link href="/docs/enduser" className="text-sm text-gray-400 hover:text-red-600 font-medium">
+            Bedienungsanleitung
+          </Link>
         </div>
       </footer>
     </div>
