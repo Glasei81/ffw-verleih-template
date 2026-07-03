@@ -4,6 +4,7 @@ import RentalActions from "@/components/rental-actions"
 import RentalFilters from "@/components/rental-filters"
 import AddRentalItem from "@/components/add-rental-item"
 import EditRentalItems from "@/components/edit-rental-items"
+import CreateManualRental from "@/components/create-manual-rental"
 import { CalendarPlus } from "lucide-react"
 
 export const dynamic = "force-dynamic"
@@ -79,9 +80,12 @@ export default async function RentalsPage({
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Ausleihen verwalten</h1>
-        <p className="text-gray-600 mt-2">Übersicht aller Anfragen und Ausleihen</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Ausleihen verwalten</h1>
+          <p className="text-gray-600 mt-2">Übersicht aller Anfragen und Ausleihen</p>
+        </div>
+        <CreateManualRental inventoryItems={inventoryOptions} />
       </div>
 
       <RentalFilters activeCount={activeCount} archiveCount={archiveCount} />
