@@ -43,8 +43,8 @@ export async function POST(request: NextRequest) {
         SELECT COALESCE(SUM(quantity), 0)::int AS reserved FROM rentals
         WHERE item_id = ${inventory.id}
           AND status = 'confirmed'
-          AND start_date <= ${endDate}
-          AND end_date >= ${startDate}
+          AND start_date < ${endDate}
+          AND end_date > ${startDate}
       `
       const reserved = Number(reservedRows[0]?.reserved ?? 0)
       const free = stock - reserved

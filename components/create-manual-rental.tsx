@@ -51,29 +51,33 @@ export default function CreateManualRental({ inventoryItems }: { inventoryItems:
   }
 
   const handleSubmit = async () => {
+    if (loading) return
+    setLoading(true)
     setError("")
 
     if (!renterName.trim()) {
       setError("Name ist erforderlich")
+      setLoading(false)
       return
     }
 
     if (!startDate || !endDate) {
       setError("Zeitraum ist erforderlich")
+      setLoading(false)
       return
     }
 
     if (items.some((i) => !i.itemId)) {
       setError("Alle Artikel müssen ausgewählt sein")
+      setLoading(false)
       return
     }
 
     if (sendEmail && !renterEmail.trim()) {
       setError("E-Mail ist erforderlich, wenn E-Mail-Versand aktiviert ist")
+      setLoading(false)
       return
     }
-
-    setLoading(true)
     try {
       const res = await fetch("/api/rentals/create-manual", {
         method: "POST",
