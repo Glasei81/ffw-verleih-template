@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getInventoryItems, getRentalRequests } from "@/lib/db"
 import Link from "next/link"
+import { getOrgConfig } from "@/lib/config"
 
 export const dynamic = "force-dynamic"
 
@@ -31,6 +32,7 @@ const requesterShort: Record<string, string> = {
 }
 
 export default async function AdminDashboard() {
+  const config = getOrgConfig()
   const [inventory, requests] = await Promise.all([getInventoryItems(), getRentalRequests()])
 
   const availableItems = inventory.filter((item) => item.is_available).length
@@ -38,7 +40,7 @@ export default async function AdminDashboard() {
   const confirmedCount = requests.filter((r) => r.status === "confirmed").length
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" style={{ '--primary-color': config.primaryColor, '--primary-color-hover': config.primaryColorHover }}>
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Übersicht</h1>
         <p className="text-gray-600 mt-2">Aktuelle Ausleihen und Inventar</p>
@@ -80,7 +82,7 @@ export default async function AdminDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Neueste Anfragen</CardTitle>
-            <Link href="/admin/rentals" className="text-sm text-red-600 hover:underline">Alle anzeigen</Link>
+            <Link href="/admin/rentals" className="text-sm text-[var(--primary-color)] hover:underline">Alle anzeigen</Link>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -128,7 +130,7 @@ export default async function AdminDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Inventar</CardTitle>
-            <Link href="/admin/inventory" className="text-sm text-red-600 hover:underline">Verwalten</Link>
+            <Link href="/admin/inventory" className="text-sm text-[var(--primary-color)] hover:underline">Verwalten</Link>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">

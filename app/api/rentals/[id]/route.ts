@@ -1,9 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { ensureRentalsSchema, updateRentalGroupStatus, updateRentalStatus, getAdminContact, sql } from "@/lib/db"
 import { getSession } from "@/lib/auth"
-import { MAIL_FROM, toWhatsAppNumber, escapeHtml } from "@/lib/mail"
+import { toWhatsAppNumber, escapeHtml } from "@/lib/mail"
 import { buildICS } from "@/lib/ics"
-import { KAUTION_EUR } from "@/lib/config"
+import { getOrgConfig } from "@/lib/config"
 import { Resend } from "resend"
 
 export async function PATCH(
@@ -16,6 +16,7 @@ export async function PATCH(
   }
 
   try {
+    const config = getOrgConfig()
     const { id: idStr } = await params
     const id = Number.parseInt(idStr)
     const { status, pickupInfo, adminMessage, requestGroup, pickupDate, pickupTime } = await request.json()
@@ -51,7 +52,6 @@ export async function PATCH(
 
     const rental = result[0]
 
-    // Send confirmation or rejection email to renter
     if (
       process.env.RESEND_API_KEY &&
       rental.renter_email &&
@@ -60,25 +60,22 @@ export async function PATCH(
       try {
         const resend = new Resend(process.env.RESEND_API_KEY)
 
-        // Antworten der Ausleiher sollen an die Admins gehen
         const adminRows = await sql`SELECT email FROM admins WHERE email IS NOT NULL AND email != ''`
         const adminEmails = adminRows.map((r) => r.email as string)
         const replyTo = adminEmails.length > 0 ? adminEmails : undefined
 
-        // Ansprechpartner = der Admin, der gerade bestätigt (aus der Session)
         const contact = await getAdminContact(session)
         const contactName = escapeHtml((contact?.display_name as string) || (contact?.username as string) || "")
         const contactEmail = escapeHtml((contact?.email as string) || "")
         const contactPhone = escapeHtml((contact?.phone as string) || "")
         const waNumber = toWhatsAppNumber((contact?.phone as string) || "")
         const phoneLine = contactPhone
-          ? `Telefon: <a href="tel:${contactPhone.replace(/\s/g, "")}" style="color:#dc2626;text-decoration:none;">${contactPhone}</a>` +
+          ? `Telefon: <a href="tel:${contactPhone.replace(/\s/g, "")}" style="color:${config.primaryColor};text-decoration:none;">${contactPhone}</a>` +
             (waNumber
               ? ` &nbsp;·&nbsp; <a href="https://wa.me/${waNumber}" style="color:#16a34a;text-decoration:none;font-weight:bold;">WhatsApp</a>`
               : "") +
             "<br>"
           : ""
-        // Ansprechpartner-Karte mit variablem Schlusssatz (je nach Bestätigung/Absage)
         const contactCard = (note: string) =>
           contactName
             ? `
@@ -86,15 +83,14 @@ export async function PATCH(
                 <strong>Dein Ansprechpartner:</strong><br>
                 ${contactName}<br>
                 ${phoneLine}
-                ${contactEmail ? `E-Mail: <a href="mailto:${contactEmail}" style="color:#dc2626;text-decoration:none;">${contactEmail}</a><br>` : ""}
+                ${contactEmail ? `E-Mail: <a href="mailto:${contactEmail}" style="color:${config.primaryColor};text-decoration:none;">${contactEmail}</a><br>` : ""}
                 <span style="color:#6b7280;font-size:13px;">${note}</span>
               </div>`
             : ""
         const contactBlock = contactName
           ? contactCard("Bitte wickle diese Ausleihe ab jetzt direkt mit deinem Ansprechpartner ab – du kannst auch einfach auf diese E-Mail antworten.")
-          : `<p>Bei Fragen antworte einfach auf diese E-Mail – damit erreichst du direkt deinen Ansprechpartner bei der FFW Raubling.</p>`
+          : `<p>Bei Fragen antworte einfach auf diese E-Mail – damit erreichst du direkt deinen Ansprechpartner bei ${config.short}.</p>`
 
-        // Get all item names + Gesamtgebühr for this group (plain für .ics, escaped fürs HTML)
         const gk = requestGroup ?? rental.request_group
         let itemNamesPlain: string
         let totalFee: number
@@ -120,7 +116,6 @@ export async function PATCH(
         const startDate = new Date(rental.start_date).toLocaleDateString("de-DE")
         const endDate = new Date(rental.end_date).toLocaleDateString("de-DE")
 
-        // Abhol-Termin als Kalender-Datei (.ics) für den Ausleiher vorbereiten
         let pickupAttachment: { filename: string; content: string }[] | undefined
         let pickupLineHtml = ""
         if (status === "confirmed" && pickupDate) {
@@ -128,9 +123,9 @@ export async function PATCH(
           const start = new Date(`${pickupDate}T${hasTime ? pickupTime : "00:00"}:00`)
           const end = new Date(start)
           if (hasTime) {
-            end.setMinutes(end.getMinutes() + 30) // Standard-Dauer 30 Min
+            end.setMinutes(end.getMinutes() + 30)
           } else {
-            end.setDate(end.getDate() + 1) // ganztägig: Enddatum exklusiv
+            end.setDate(end.getDate() + 1)
           }
           const descParts = [
             `Abholung: ${itemNamesPlain}`,
@@ -139,8 +134,8 @@ export async function PATCH(
             contact?.phone ? `Telefon: ${contact?.phone}` : "",
           ].filter(Boolean)
           const ics = buildICS({
-            uid: `${gk ?? rental.id}@ffw-raubling-verleih`,
-            summary: `Abholung Verleih: ${itemNamesPlain} – FFW Raubling`,
+            uid: `${gk ?? rental.id}@${config.short.toLowerCase().replace(/\s+/g, '-')}-verleih`,
+            summary: `Abholung Verleih: ${itemNamesPlain} – ${config.short}`,
             description: descParts.join("\n"),
             start,
             end,
@@ -157,14 +152,14 @@ export async function PATCH(
 
         if (status === "confirmed") {
           await resend.emails.send({
-            from: MAIL_FROM,
+            from: config.mailFrom,
             to: rental.renter_email,
             replyTo,
             attachments: pickupAttachment,
             subject: `Deine Ausleihanfrage wurde bestätigt – ${itemNamesStr}`,
             html: `
               <div style="font-family: sans-serif; max-width: 500px;">
-                <h2 style="color: #16a34a;">Ausleihe bestätigt – FFW Raubling</h2>
+                <h2 style="color: #16a34a;">Ausleihe bestätigt – ${escapeHtml(config.short)}</h2>
                 <p>Hallo ${renterName},</p>
                 <p>Deine Anfrage für <strong>${itemNamesStr}</strong> (${startDate}–${endDate}) wurde bestätigt.</p>
                 ${pickupLineHtml}
@@ -175,27 +170,26 @@ export async function PATCH(
                 ${adminMessageHtml ? `<p><em>${adminMessageHtml}</em></p>` : ""}
                 <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:16px;margin:16px 0;">
                   <p style="margin:0 0 8px;"><strong>Gebühr (Pauschale): ${Number(totalFee).toLocaleString("de-DE")}€.</strong> Diesen Betrag zahlst du bei der Abholung.</p>
-                  <p style="margin:0 0 8px;"><strong>Kaution: ${KAUTION_EUR}€.</strong> Bitte bring die Kaution zusätzlich zur Abholung mit. Ohne hinterlegte Kaution können wir dir die Sachen leider nicht mitgeben. Bei unbeschädigter Rückgabe bekommst du sie zurück.</p>
-                  <p style="margin:0;"><strong>Schäden &amp; Verluste:</strong> Geht etwas kaputt oder fehlt etwas, kümmern wir uns um Ersatz oder Reparatur – die Kosten dafür trägst du als Ausleiher.</p>
+                  <p style="margin:0 0 8px;"><strong>Kaution: ${config.kautionEur}€.</strong> Bitte bring die Kaution zusätzlich zur Abholung mit. Ohne hinterlegte Kaution können wir dir die Sachen leider nicht mitgeben. Bei unbeschädigter Rückgabe bekommst du sie zurück.</p>
+                  <p style="margin:0;"><strong>Schäden & Verluste:</strong> Geht etwas kaputt oder fehlt etwas, kümmern wir uns um Ersatz oder Reparatur – die Kosten dafür trägst du als Ausleiher.</p>
                 </div>
                 ${contactBlock}
               </div>
             `,
           })
         } else {
-          // Absage: ablehnenden Admin als Ansprechpartner nennen
           const rejectContact = contactName
             ? `<p>Hast du Rückfragen? Wende dich am besten an den Admin, der die Anfrage bearbeitet hat:</p>` +
               contactCard("Du erreichst ihn unter den genannten Kontaktdaten oder per Antwort auf diese E-Mail.")
-            : `<p>Hast du Rückfragen? Wende dich bitte an einen Admin der FFW Raubling – am besten antwortest du einfach auf diese E-Mail.</p>`
+            : `<p>Hast du Rückfragen? Wende dich bitte an einen Admin von ${config.short} – am besten antwortest du einfach auf diese E-Mail.</p>`
           await resend.emails.send({
-            from: MAIL_FROM,
+            from: config.mailFrom,
             to: rental.renter_email,
             replyTo,
             subject: `Deine Ausleihanfrage – ${itemNamesStr}`,
             html: `
               <div style="font-family: sans-serif; max-width: 500px;">
-                <h2 style="color: #dc2626;">Anfrage konnte nicht bestätigt werden – FFW Raubling</h2>
+                <h2 style="color: ${config.primaryColor};">Anfrage konnte nicht bestätigt werden – ${escapeHtml(config.short)}</h2>
                 <p>Hallo ${renterName},</p>
                 <p>Leider können wir deine Anfrage für <strong>${itemNamesStr}</strong> (${startDate}–${endDate}) nicht bestätigen.</p>
                 ${adminMessageHtml ? `<p><strong>Hinweis:</strong> ${adminMessageHtml}</p>` : ""}

@@ -1,14 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createRental, ensureRentalsSchema, getInventoryById, sql } from "@/lib/db"
-import { MAIL_FROM, escapeHtml } from "@/lib/mail"
+import { escapeHtml } from "@/lib/mail"
+import { getOrgConfig } from "@/lib/config"
 import { Resend } from "resend"
 import { randomUUID } from "crypto"
 
 export async function POST(request: NextRequest) {
   try {
+    const config = getOrgConfig()
     const data = await request.json()
     const { renterName, renterEmail, renterPhone, startDate, endDate, notes, itemIds, requesterType } = data
-    // Gewünschte Stückzahl je Artikel-ID (z.B. { "12": 5 }); fehlt sie, gilt 1
     const quantities: Record<number, number> = data.quantities || {}
 
     if (!itemIds || !Array.isArray(itemIds) || itemIds.length === 0) {
@@ -38,11 +39,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Ein oder mehrere Artikel sind nicht verfügbar" }, { status: 400 })
     }
 
-    // Schema sicherstellen (u.a. quantity-Spalte) bevor wir Mengen prüfen
     await ensureRentalsSchema()
 
-    // Verfügbarkeit prüfen: bereits bestätigte Stückzahl im Zeitraum gegen
-    // den Gesamtbestand und die jetzt gewünschte Menge abgleichen
     for (const item of items) {
       const requested = Math.max(1, Number(quantities[item!.id] ?? 1))
       const stock = Number(item!.quantity ?? 1)
@@ -63,7 +61,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // All items in this submission share one group id
     const requestGroup = randomUUID()
     const rType = (requesterType as string) || "external"
 
@@ -76,7 +73,7 @@ export async function POST(request: NextRequest) {
           renter_phone: renterPhone,
           start_date: startDate,
           end_date: endDate,
-          total_price: item!.price_per_day, // Pauschale pro Gegenstand
+          total_price: item!.price_per_day,
           notes,
           request_group: requestGroup,
           requester_type: rType,
@@ -85,7 +82,6 @@ export async function POST(request: NextRequest) {
       )
     )
 
-    // Notify all admins
     if (process.env.RESEND_API_KEY) {
       try {
         const adminRows = await sql`SELECT email FROM admins WHERE email IS NOT NULL AND email != ''`
@@ -93,25 +89,24 @@ export async function POST(request: NextRequest) {
 
         if (adminEmails.length > 0) {
           const resend = new Resend(process.env.RESEND_API_KEY)
-          // Pauschalpreis: einmal pro Gegenstand, unabhängig von Menge und Tagen
           const itemList = items.map((i) => `${escapeHtml(i!.name)} (${i!.price_per_day}€)`).join(", ")
           const totalPrice = items.reduce((sum, i) => sum + Number(i!.price_per_day), 0)
 
           await resend.emails.send({
-            from: MAIL_FROM,
+            from: config.mailFrom,
             to: adminEmails,
             replyTo: renterEmail || undefined,
             subject: `Neue Ausleihanfrage von ${escapeHtml(renterName)}`,
             html: `
               <div style="font-family: sans-serif; max-width: 500px;">
-                <h2 style="color: #dc2626;">Neue Ausleihanfrage – FFW Raubling</h2>
+                <h2 style="color: ${config.primaryColor};">Neue Ausleihanfrage – ${escapeHtml(config.short)}</h2>
                 <table style="width: 100%; border-collapse: collapse;">
                   <tr><td style="padding: 6px 0; color: #666;">Artikel</td><td style="padding: 6px 0; font-weight: bold;">${itemList}</td></tr>
                   <tr><td style="padding: 6px 0; color: #666;">Von</td><td style="padding: 6px 0;">${escapeHtml(renterName)}</td></tr>
                   <tr><td style="padding: 6px 0; color: #666;">E-Mail</td><td style="padding: 6px 0;">${escapeHtml(renterEmail)}</td></tr>
                   <tr><td style="padding: 6px 0; color: #666;">Telefon</td><td style="padding: 6px 0;">${escapeHtml(renterPhone) || "–"}</td></tr>
                   <tr><td style="padding: 6px 0; color: #666;">Zeitraum</td><td style="padding: 6px 0;">${startDate} bis ${endDate} (${days} Tag${days !== 1 ? "e" : ""})</td></tr>
-                  <tr><td style="padding: 6px 0; color: #666;">Gesamtpreis</td><td style="padding: 6px 0; font-weight: bold; color: #dc2626;">${totalPrice}€ Pauschale</td></tr>
+                  <tr><td style="padding: 6px 0; color: #666;">Gesamtpreis</td><td style="padding: 6px 0; font-weight: bold; color: ${config.primaryColor};">${totalPrice}€ Pauschale</td></tr>
                   ${notes ? `<tr><td style="padding: 6px 0; color: #666;">Notizen</td><td style="padding: 6px 0;"><strong><u>${escapeHtml(notes)}</u></strong></td></tr>` : ""}
                 </table>
               </div>

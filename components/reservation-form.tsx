@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle, Check, AlertTriangle, Minus, Plus, ChevronDown, ChevronRight, Search } from "lucide-react"
 import Link from "next/link"
-import { KAUTION_EUR } from "@/lib/config"
+import { getOrgConfig, formatPrice } from "@/lib/config"
 
 interface InventoryItem {
   id: number
@@ -18,8 +18,6 @@ interface InventoryItem {
   description: string
   quantity: number
 }
-
-const fmt = (p: number | string) => Number(p).toLocaleString("de-DE")
 
 const CATEGORY_ORDER = ["Küche/Gastro", "Mobiliar", "Deko", "Sonstiges"]
 
@@ -37,6 +35,7 @@ interface ReservationFormProps {
 }
 
 export default function ReservationForm({ availableItems }: ReservationFormProps) {
+  const config = getOrgConfig()
   const [selectedItems, setSelectedItems] = useState<Record<number, number>>({})
   const [requesterType] = useState("external")
   const [formData, setFormData] = useState({
@@ -52,7 +51,6 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
   const [error, setError] = useState("")
   const [itemSearch, setItemSearch] = useState("")
 
-  // Artikel nach Suchbegriff filtern (Name oder Beschreibung)
   const search = itemSearch.trim().toLowerCase()
   const visibleItems = search
     ? availableItems.filter((i) =>
@@ -60,7 +58,6 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
       )
     : availableItems
 
-  // Group items by category
   const categoryMap = new Map<string, InventoryItem[]>()
   for (const item of visibleItems) {
     const cat = extractCategory(item.description)
@@ -72,11 +69,8 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
     ...[...categoryMap.entries()].filter(([c]) => !CATEGORY_ORDER.includes(c)).map(([c, items]) => ({ category: c, items })),
   ]
 
-  // Kategorien standardmäßig zugeklappt
   const [openCats, setOpenCats] = useState<Record<string, boolean>>({})
   const toggleCat = (cat: string) => setOpenCats((prev) => ({ ...prev, [cat]: !prev[cat] }))
-
-  // Beim Suchen: Kategorien mit Treffern automatisch aufklappen
   const catOpen = (cat: string) => (search ? true : !!openCats[cat])
 
   const selectedIds = Object.keys(selectedItems).map(Number)
@@ -96,7 +90,6 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
     setSelectedItems((prev) => ({ ...prev, [id]: Math.max(1, qty) }))
   }
 
-  // Pauschale: Preis einmal pro Artikel, unabhängig von der Menge
   const totalPrice = selectedIds.reduce((sum, id) => {
     const item = availableItems.find((i) => i.id === id)
     return sum + Number(item?.price_per_day ?? 0)
@@ -143,19 +136,19 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
 
   if (success) {
     return (
-      <div className="text-center py-8">
+      <div className="text-center py-8" style={{ '--primary-color': config.primaryColor, '--primary-color-hover': config.primaryColorHover }}>
         <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
         <h3 className="text-xl font-bold text-gray-900 mb-2">Anfrage erfolgreich gesendet!</h3>
         <p className="text-gray-600 mb-6">
           Deine Anfrage ist bei uns angekommen – noch <strong>nicht verbindlich</strong>.
-          Ein Mitglied der FFW Raubling prüft sie und meldet sich per E-Mail.
+          Ein Mitglied der <strong>{config.short}</strong> prüft sie und meldet sich per E-Mail.
           Nach der Bestätigung bekommst du deinen festen <strong>Ansprechpartner</strong>
           mit allen Infos zur Abholung; ab dann läuft alles direkt über ihn.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Button onClick={() => { setSuccess(false); setSelectedItems({}) }} variant="outline">Weitere Anfrage</Button>
           <Link href="/">
-            <Button className="bg-red-600 hover:bg-red-700 w-full sm:w-auto">Zur Startseite</Button>
+            <Button className="bg-[var(--primary-color)] hover:bg-[var(--primary-color-hover)] w-full sm:w-auto">Zur Startseite</Button>
           </Link>
         </div>
       </div>
@@ -163,7 +156,7 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-5" style={{ '--primary-color': config.primaryColor, '--primary-color-hover': config.primaryColorHover, '--secondary-color': config.secondaryColor }}>
       {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
 
       <div className="space-y-2">
@@ -196,7 +189,7 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
                   {category}
                   <span className="ml-2 text-xs font-normal text-gray-400">{items.length}</span>
                   {items.some((i) => i.id in selectedItems) && (
-                    <span className="ml-2 text-xs bg-red-600 text-white rounded-full px-1.5 py-0.5">
+                    <span className="ml-2 text-xs bg-[var(--primary-color)] text-white rounded-full px-1.5 py-0.5">
                       {items.filter((i) => i.id in selectedItems).length}
                     </span>
                   )}
@@ -213,7 +206,7 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
                     const qty = selectedItems[item.id] ?? 1
                     const detail = extractDetail(item.description)
                     return (
-                      <div key={item.id} className={`transition-colors ${selected ? "bg-red-50" : "bg-white"}`}>
+                      <div key={item.id} className={`transition-colors ${selected ? "bg-[var(--secondary-color)]" : "bg-white"}`}>
                         <div className="flex items-center justify-between p-3 cursor-pointer" onClick={() => toggleItem(item.id)}>
                           <div className="flex-1 mr-3">
                             <p className="font-medium text-sm">{item.name}</p>
@@ -221,9 +214,9 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
                             <p className="text-xs text-gray-400">{item.quantity ?? 1} Stück vorhanden</p>
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-sm font-bold text-red-600">{fmt(item.price_per_day)}€</span>
+                            <span className="text-sm font-bold text-[var(--primary-color)]">{formatPrice(item.price_per_day)}€</span>
                             <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
-                              selected ? "bg-red-600 border-red-600" : "border-gray-300 bg-white"
+                              selected ? "bg-[var(--primary-color)] border-[var(--primary-color)]" : "border-gray-300 bg-white"
                             }`}>
                               {selected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
                             </div>
@@ -261,15 +254,15 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
       </div>
 
       {totalPrice > 0 && (
-        <div className="bg-red-50 p-3 rounded-lg flex justify-between items-center">
+        <div className="bg-[var(--secondary-color)] p-3 rounded-lg flex justify-between items-center">
           <span className="font-medium text-sm">{selectedIds.length} Artikel ausgewählt:</span>
-          <span className="text-lg font-bold text-red-600">{fmt(totalPrice)}€ Pauschale</span>
+          <span className="text-lg font-bold text-[var(--primary-color)]">{formatPrice(totalPrice)}€ Pauschale</span>
         </div>
       )}
 
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
         <p className="text-sm text-blue-900">
-          <strong>Kaution: {KAUTION_EUR}€.</strong> Die Kaution wird bei der Abholung hinterlegt
+          <strong>Kaution: {config.kautionEur}€.</strong> Die Kaution wird bei der Abholung hinterlegt
           und du bekommst sie bei unbeschädigter Rückgabe zurück.
           Ohne hinterlegte Kaution geben wir die Sachen nicht heraus.
         </p>
@@ -323,12 +316,12 @@ export default function ReservationForm({ availableItems }: ReservationFormProps
         <p className="text-xs text-amber-800">
           <strong>Hinweis:</strong> Geht etwas kaputt oder verloren, kümmern wir uns um Ersatz
           oder Reparatur – die Kosten dafür trägst du als Ausleiher.
-          Die FFW Raubling behält sich vor, Anfragen abzulehnen.
+          Die <strong>{config.short}</strong> behält sich vor, Anfragen abzulehnen.
           Nach Bestätigung erhältst du eine E-Mail mit Abholzeit und -ort.
         </p>
       </div>
 
-      <Button type="submit" className="w-full bg-red-600 hover:bg-red-700"
+      <Button type="submit" className="w-full bg-[var(--primary-color)] hover:bg-[var(--primary-color-hover)]"
         disabled={isLoading || availableItems.length === 0}>
         {isLoading ? "Wird gesendet..." : "Jetzt anfragen"}
       </Button>
