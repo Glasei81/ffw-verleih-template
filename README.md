@@ -34,7 +34,6 @@
 ### 🎨 Vollständig anpassbar via Env-Variablen
 - Vereinsname, Kurzname, Farben, Logo/Skyline
 - Kaution, Support-E-Mail, Absender-Adresse
-- Live-Demo: [verleih.feuerwehr-raubling.de](https://verleih.feuerwehr-raubling.de)
 
 ---
 
